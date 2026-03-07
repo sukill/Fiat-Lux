@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* SaaS Light Theme Palette */
+  --color-primary: #1E293B;
+  --color-primary-light: #334155;
+  --color-accent: #3B82F6;
+
+  --color-bg-main: #FFFFFF;
+  --color-bg-sub: #F8FAFC;
+  --color-bg-view: #F1F5F9;
+  --color-bg-card: #FFFFFF;
+
+  --color-text-main: #1E293B;
+  --color-text-sub: #475569;
+  --color-text-muted: #94A3B8;
+
+  --color-border-light: #E2E8F0;
+  --color-border-focus: #CBD5E1;
+
+  /* Custom Shadows */
+  --shadow-saas-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-saas-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-saas-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-saas-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+@layer base {
+  * {
+    @apply box-border m-0 p-0;
+  }
+
+  body {
+    @apply font-sans antialiased min-h-screen overflow-x-hidden;
+    background-color: var(--color-bg-main);
+    color: var(--color-text-main);
+    line-height: 1.75;
+    letter-spacing: -0.02em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-bold;
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.03em;
+    color: var(--color-text-main);
+  }
+}
+
+@layer components {
+
+  /* Base Card System */
+  .card-saas {
+    @apply bg-white border border-slate-200 shadow-sm transition-all duration-300;
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .card-saas:hover {
+    @apply shadow-xl border-slate-300;
+    transform: translateY(-6px) scale(1.02);
+  }
+
+  /* Interaction Utilities */
+  .btn-saas {
+    @apply inline-flex items-center justify-center font-bold text-sm transition-all duration-300 cursor-pointer border-none gap-2;
+    padding: 0.75rem 1.75rem;
+    border-radius: 9999px;
+  }
+
+  .btn-saas:hover {
+    @apply scale-105;
+  }
+
+  .btn-primary {
+    @apply bg-slate-900 text-white;
+  }
+
+  .btn-primary:hover {
+    @apply bg-slate-800 shadow-lg;
+    box-shadow: 0 10px 20px rgba(30, 41, 59, 0.15);
+  }
+
+  /* Sidebar Specific */
+  .sidebar-shadow {
+    box-shadow: 10px 0 30px -15px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-5 py-3 rounded-2xl font-semibold transition-all duration-200 no-underline;
+    color: var(--color-text-sub);
+  }
+
+  .sidebar-link:hover {
+    @apply bg-slate-100/50 text-slate-900 translate-x-1;
+  }
+
+  .sidebar-link.active {
+    @apply bg-white shadow-sm border border-slate-200 text-slate-900;
+  }
+}
+
+/* Custom Animation Utility */
+.animate-slide-up {
+  animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
