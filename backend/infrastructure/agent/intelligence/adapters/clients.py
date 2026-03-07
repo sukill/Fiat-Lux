@@ -81,16 +81,16 @@ class BaseLLMInferrer(ContextInferrer, ABC):
         """
 
     @abstractmethod
-    def _call_llm(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+    async def _call_llm(self, prompt: str, system_instruction: Optional[str] = None) -> str:
         pass
 
-    def infer_intent(
+    async def infer_intent(
         self,
         user_request: str,
         available_personas: Optional[List[str]] = None,
         available_guidelines: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        response_text = self._call_llm(
+        response_text = await self._call_llm(
             prompt=f"User Request: {user_request}",
             system_instruction=self._get_intent_system_prompt(
                 available_personas, available_guidelines
@@ -118,10 +118,10 @@ class BaseLLMInferrer(ContextInferrer, ABC):
                 "suggested_guidelines": ["general"],
             }
 
-    def decompose_tasks(
+    async def decompose_tasks(
         self, user_request: str, selected_personas: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        response_text = self._call_llm(
+        response_text = await self._call_llm(
             prompt=f"User Request: {user_request}",
             system_instruction=self._get_decomposition_system_prompt(selected_personas),
         )
@@ -132,17 +132,17 @@ class BaseLLMInferrer(ContextInferrer, ABC):
             print(f"ERROR: Decomposition failed: {e}")
             return [{"persona_name": p["persona"].name, "task": user_request} for p in selected_personas]
 
-    def execute_task(
+    async def execute_task(
         self, persona_context: Dict[str, Any], task: str, guidelines: List[str]
     ) -> str:
-        return self._call_llm(
+        return await self._call_llm(
             prompt=f"Task: {task}",
             system_instruction=self._get_execution_system_prompt(persona_context, guidelines),
         )
 
-    def aggregate_results(self, user_request: str, results: List[Dict[str, Any]]) -> str:
+    async def aggregate_results(self, user_request: str, results: List[Dict[str, Any]]) -> str:
         combined_context = "\n\n".join([f"### RESULT FROM {r['persona_name']}:\n{r['output']}" for r in results])
-        return self._call_llm(
+        return await self._call_llm(
             prompt=f"Original Request: {user_request}\n\nCollected Outputs:\n{combined_context}",
             system_instruction=self._get_aggregation_system_prompt(),
         )
@@ -161,7 +161,7 @@ class GeminiContextInferrer(BaseLLMInferrer):
             api_key=api_key, model=model_name, temperature=0, max_output_tokens=max_tokens
         )
 
-    def _call_llm(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+    async def _call_llm(self, prompt: str, system_instruction: Optional[str] = None) -> str:
         from langchain_core.messages import SystemMessage, HumanMessage
 
         messages = []
@@ -169,7 +169,7 @@ class GeminiContextInferrer(BaseLLMInferrer):
             messages.append(SystemMessage(content=system_instruction))
         messages.append(HumanMessage(content=prompt))
 
-        response = self.llm.invoke(messages)
+        response = await self.llm.ainvoke(messages)
         return response.content
 
 
@@ -184,7 +184,7 @@ class OpenAIContextInferrer(BaseLLMInferrer):
 
         self.llm = ChatOpenAI(api_key=api_key, model=model_name, temperature=0, max_tokens=max_tokens)
 
-    def _call_llm(self, prompt: str, system_instruction: Optional[str] = None) -> str:
+    async def _call_llm(self, prompt: str, system_instruction: Optional[str] = None) -> str:
         from langchain_core.messages import SystemMessage, HumanMessage
 
         messages = []
@@ -192,5 +192,5 @@ class OpenAIContextInferrer(BaseLLMInferrer):
             messages.append(SystemMessage(content=system_instruction))
         messages.append(HumanMessage(content=prompt))
 
-        response = self.llm.invoke(messages)
+        response = await self.llm.ainvoke(messages)
         return response.content

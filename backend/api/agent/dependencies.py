@@ -70,6 +70,8 @@ _persona_repo = DocuHubPersonaRepository(_docuhub_client)
 _guideline_set_repo = InMemoryGuidelineSetRepository()
 
 _run_repo = InMemoryWorkflowRunRepository()
+_inferrer = create_inferrer()
+_persona_selector = IntelligencePersonaSelector(_inferrer)
 
 
 def get_persona_service(db: SessionLocal = Depends(get_db)) -> PersonaService:

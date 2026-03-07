@@ -39,7 +39,7 @@ class AgentOrchestrator:
         guideline_names = [g.title for g in all_guidelines]
 
         # 1. 의도 및 문맥 추론
-        inference = self.inferrer.infer_intent(
+        inference = await self.inferrer.infer_intent(
             user_request, available_guidelines=guideline_names
         )
         intent = inference.get("intent", "unknown")
@@ -139,7 +139,7 @@ class AgentOrchestrator:
         # 4. 태스크 분해 (Decomposition)
         # SelectedPersona 객체 리스트를 딕셔너리 형태로 변환하여 inferrer에 전달
         persona_dicts = [{"persona": p.persona, "reason": p.reason} for p in selected_personas]
-        decomposed = self.inferrer.decompose_tasks(user_request, persona_dicts)
+        decomposed = await self.inferrer.decompose_tasks(user_request, persona_dicts)
         
         # 분해된 태스크를 각 SelectedPersona에 할당
         for task_info in decomposed:
@@ -180,7 +180,7 @@ class AgentOrchestrator:
             }
             
             # 실제 실행
-            output = self.inferrer.execute_task(
+            output = await self.inferrer.execute_task(
                 persona_context=persona_context,
                 task=sel_p.assigned_task or run.user_request,
                 guidelines=sel_p.persona.guidelines
@@ -195,7 +195,7 @@ class AgentOrchestrator:
             await self.run_repo.save(run)
 
         # 3. 결과 취합 (Aggregation)
-        collective_result = self.inferrer.aggregate_results(run.user_request, execution_results)
+        collective_result = await self.inferrer.aggregate_results(run.user_request, execution_results)
         run.collective_result = collective_result
         run.status = TaskStatus.COMPLETED
         await self.run_repo.save(run)

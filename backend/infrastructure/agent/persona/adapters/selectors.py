@@ -21,7 +21,7 @@ class IntelligencePersonaSelector(PersonaSelector):
         available_names = [p.name for p in personas]
         print(f"DEBUG: Selecting from personas: {available_names}")
 
-        inference = self.inferrer.infer_intent(
+        inference = await self.inferrer.infer_intent(
             user_request, available_personas=available_names
         )
         suggested_personas = inference.get("personas", [])
