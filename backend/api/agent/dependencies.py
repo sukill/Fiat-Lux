@@ -3,6 +3,8 @@ from infrastructure.agent.config import settings
 from domain.agent.workflow.use_cases import AgentOrchestrator
 from domain.agent.persona.use_cases import PersonaService
 from domain.agent.guideline.use_cases import GuidelineService
+from domain.agent.storage.use_cases import StorageService
+from domain.agent.storage.ports.inputs import StorageUseCase
 from infrastructure.agent.intelligence.adapters.clients import (
     GeminiContextInferrer,
     OpenAIContextInferrer,
@@ -11,7 +13,6 @@ from fastapi import Depends
 from infrastructure.database import SessionLocal, init_db
 from infrastructure.agent.persona.adapters.repositories import (
     DocuHubPersonaRepository,
-    MySQLPersonaRepository,
     MySQLPersonaSetRepository,
 )
 from infrastructure.agent.guideline.adapters.repositories import (
@@ -75,8 +76,8 @@ _persona_selector = IntelligencePersonaSelector(_inferrer)
 
 
 def get_persona_service(db: SessionLocal = Depends(get_db)) -> PersonaService:
-    # Persona는 DocuHub를 기본으로 사용하고, PersonaSet은 아직 MySQL 병행 사용 고려 가능 (현재는 PersonaService에서 DocuHub 중심)
-    return PersonaService(_persona_repo, MySQLPersonaSetRepository(db))
+    # Persona uses DocuHub, PersonaSet uses MySQL with DocuHub-Resolution
+    return PersonaService(_persona_repo, MySQLPersonaSetRepository(db, _persona_repo))
 
 
 def get_guideline_service() -> GuidelineService:
@@ -89,7 +90,7 @@ def get_persona_selector() -> PersonaSelector:
 
 def get_orchestrator(db: SessionLocal = Depends(get_db)) -> AgentOrchestrator:
     # Use fresh session for MySQL repositories
-    persona_set_repo = MySQLPersonaSetRepository(db)
+    persona_set_repo = MySQLPersonaSetRepository(db, _persona_repo)
 
     return AgentOrchestrator(
         _inferrer,
@@ -99,3 +100,10 @@ def get_orchestrator(db: SessionLocal = Depends(get_db)) -> AgentOrchestrator:
         _persona_selector,
         _run_repo,
     )
+
+
+_storage_service = StorageService(_docuhub_client)
+
+
+def get_storage_service() -> StorageUseCase:
+    return _storage_service
