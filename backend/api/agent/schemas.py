@@ -21,6 +21,7 @@ class GuidelineCreate(BaseModel):
 
 class GuidelineUpdate(BaseModel):
     title: Optional[str] = None
+    content: Optional[str] = None
     directory: Optional[str] = None
     repository: Optional[str] = None
     branch: Optional[str] = None
