@@ -21,13 +21,14 @@ class DocuHubClient:
         self.namespace = self.settings.docuhub_user_id
         self.repo_name = repo_name or self.settings.docuhub_repo_name
 
-    async def init_repo(self, repo_name: Optional[str] = None) -> Dict[str, Any]:
+    async def init_repo(self, repo_name: Optional[str] = None, namespace: Optional[str] = None) -> Dict[str, Any]:
         """저장소를 초기화합니다."""
         target_repo = repo_name or self.repo_name
+        target_namespace = namespace or self.namespace
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/repo/init",
-                params={"namespace": self.namespace, "repo_name": target_repo},
+                params={"namespace": target_namespace, "repo_name": target_repo},
             )
             response.raise_for_status()
             return response.json()
@@ -48,11 +49,13 @@ class DocuHubClient:
         message: str,
         target_ref: str = "main",
         repo_name: Optional[str] = None,
+        namespace: Optional[str] = None,
     ) -> Dict[str, Any]:
         """변경 사항을 커밋합니다."""
         target_repo = repo_name or self.repo_name
+        target_namespace = namespace or self.namespace
         payload = {
-            "namespace": self.namespace,
+            "namespace": target_namespace,
             "repo_name": target_repo,
             "target_ref": target_ref,
             "commit_message": message,
@@ -65,11 +68,12 @@ class DocuHubClient:
             response.raise_for_status()
             return response.json()
 
-    async def list_files(self, path: str = "", ref: str = "main", repo_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def list_files(self, path: str = "", ref: str = "main", repo_name: Optional[str] = None, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
         """파일 목록을 조회합니다."""
         target_repo = repo_name or self.repo_name
+        target_namespace = namespace or self.namespace
         params = {
-            "namespace": self.namespace,
+            "namespace": target_namespace,
             "repo_name": target_repo,
             "ref": ref,
             "path": path,
@@ -79,12 +83,13 @@ class DocuHubClient:
             response.raise_for_status()
             return response.json().get("entries", [])
 
-    async def read_file(self, path: str, ref: str = "main", repo_name: Optional[str] = None) -> str:
+    async def read_file(self, path: str, ref: str = "main", repo_name: Optional[str] = None, namespace: Optional[str] = None) -> str:
         """파일의 내용을 읽어옵니다."""
         target_repo = repo_name or self.repo_name
+        target_namespace = namespace or self.namespace
         async with httpx.AsyncClient() as client:
             params = {
-                "namespace": self.namespace,
+                "namespace": target_namespace,
                 "repo_name": target_repo,
                 "ref": ref,
                 "path": path,

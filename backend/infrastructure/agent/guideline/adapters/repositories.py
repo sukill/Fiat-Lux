@@ -1,12 +1,18 @@
 from typing import List, Optional, Dict
 from uuid import UUID
 import json
+import re
 from domain.agent.guideline.models import Guideline, GuidelineSet
 from domain.agent.guideline.ports.outputs import (
     GuidelineRepository,
     GuidelineSetRepository,
 )
 from infrastructure.agent.common.adapters.docuhub_client import DocuHubClient
+
+
+def _sanitize_filename(name: str) -> str:
+    # Use only alphanumeric and underscore
+    return re.sub(r'[^\w\-_\.]', '_', name)
 
 
 class DocuHubGuidelineRepository(GuidelineRepository):
@@ -16,12 +22,13 @@ class DocuHubGuidelineRepository(GuidelineRepository):
         self.base_path = "guidelines"
 
     async def save(self, guideline: Guideline) -> None:
-        path = f"{self.base_path}/{guideline.id}.json"
-        content = guideline.model_dump_json()
+        filename = _sanitize_filename(guideline.title) or str(guideline.id)
+        path = f"{self.base_path}/{filename}.json"
+        content = guideline.model_dump_json(indent=2)
         change = {
             "path": path,
             "content": content,
-            "action": "MODIFY"  # DocuHub commit seems to use MODIFY for both add/update based on example
+            "action": "MODIFY"
         }
         await self.client.commit(
             changes=[change],
@@ -30,14 +37,30 @@ class DocuHubGuidelineRepository(GuidelineRepository):
         )
 
     async def find_by_id(self, guideline_id: UUID) -> Optional[Guideline]:
-        path = f"{self.base_path}/{guideline_id}.json"
+        # Implementation changed: scan files to find matching ID
         try:
+            path = f"{self.base_path}/{guideline_id}.json"
             content = await self.client.read_file(path, repo_name=self.repo_name)
-            if not content:
-                return None
-            return Guideline.model_validate_json(content)
+            if content:
+                g = Guideline.model_validate_json(content)
+                if g.id == guideline_id:
+                    return g
         except Exception:
-            return None
+            pass
+
+        try:
+            entries = await self.client.list_files(self.base_path, repo_name=self.repo_name)
+            for entry in entries:
+                if not entry["is_dir"] and entry["name"].endswith(".json"):
+                    content = await self.client.read_file(f"{self.base_path}/{entry['name']}", repo_name=self.repo_name)
+                    if content:
+                        g = Guideline.model_validate_json(content)
+                        if g.id == guideline_id:
+                            return g
+        except Exception:
+            pass
+
+        return None
 
     async def find_by_intent(self, intent: str) -> List[Guideline]:
         all_guidelines = await self.list_all()
@@ -59,9 +82,12 @@ class DocuHubGuidelineRepository(GuidelineRepository):
         guidelines = []
         for entry in entries:
             if not entry["is_dir"] and entry["name"].endswith(".json"):
-                g = await self.find_by_id(UUID(entry["name"].replace(".json", "")))
-                if g:
-                    guidelines.append(g)
+                try:
+                    content = await self.client.read_file(f"{self.base_path}/{entry['name']}", repo_name=self.repo_name)
+                    if content:
+                        guidelines.append(Guideline.model_validate_json(content))
+                except Exception:
+                    continue
         return guidelines
 
 

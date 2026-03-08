@@ -14,11 +14,15 @@ class PersonaRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_id(self, persona_id: UUID) -> Optional[AgentPersona]:
+    async def find_by_id(self, persona_id: UUID, namespace: Optional[str] = None) -> Optional[AgentPersona]:
         pass
 
     @abstractmethod
-    async def list_all(self) -> List[AgentPersona]:
+    async def list_all(self, namespace: Optional[str] = None) -> List[AgentPersona]:
+        pass
+
+    @abstractmethod
+    async def delete(self, persona: AgentPersona) -> None:
         pass
 
 

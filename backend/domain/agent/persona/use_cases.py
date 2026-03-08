@@ -18,6 +18,7 @@ class PersonaService:
         goals: List[str] = None,
         constraints: List[str] = None,
         guidelines: List[str] = None,
+        namespace: str = "fiat-lux-system",
     ) -> AgentPersona:
         persona = AgentPersona(
             name=name,
@@ -27,12 +28,13 @@ class PersonaService:
             goals=goals or [],
             constraints=constraints or [],
             guidelines=guidelines or [],
+            namespace=namespace,
         )
         await self.repo.save(persona)
         return persona
 
-    async def get_persona(self, persona_id: UUID) -> Optional[AgentPersona]:
-        return await self.repo.find_by_id(persona_id)
+    async def get_persona(self, persona_id: UUID, namespace: Optional[str] = None) -> Optional[AgentPersona]:
+        return await self.repo.find_by_id(persona_id, namespace=namespace)
 
     async def update_persona(
         self,
@@ -64,8 +66,15 @@ class PersonaService:
             persona.guidelines = guidelines
         return await self.repo.update(persona)
 
-    async def list_personas(self) -> List[AgentPersona]:
-        return await self.repo.list_all()
+    async def list_personas(self, namespace: Optional[str] = None) -> List[AgentPersona]:
+        return await self.repo.list_all(namespace=namespace)
+
+    async def delete_persona(self, persona_id: UUID, namespace: Optional[str] = None) -> bool:
+        persona = await self.repo.find_by_id(persona_id, namespace=namespace)
+        if not persona:
+            return False
+        await self.repo.delete(persona)
+        return True
 
     async def create_persona_set(
         self,

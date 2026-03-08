@@ -8,9 +8,15 @@ from pydantic import BaseModel
 
 
 from sqlalchemy.orm import Session
+import re
 from infrastructure.agent.persona.persistence_models import (
     PersonaSetORM,
 )
+
+
+def _sanitize_filename(name: str) -> str:
+    # Use only alphanumeric and underscore
+    return re.sub(r'[^\w\-_\.]', '_', name)
 
 
 class DocuHubPersonaRepository(PersonaRepository):
@@ -20,37 +26,78 @@ class DocuHubPersonaRepository(PersonaRepository):
         self.base_path = "personas"
 
     async def save(self, persona: AgentPersona) -> None:
-        path = f"{self.base_path}/{persona.id}.json"
-        content = persona.model_dump_json()
+        filename = _sanitize_filename(persona.name) or str(persona.id)
+        path = f"{self.base_path}/{filename}.json"
+        content = persona.model_dump_json(indent=2)
+        # Ensure repo exists in the target namespace before committing
+        try:
+            await self.client.init_repo(repo_name=self.repo_name, namespace=persona.namespace)
+        except Exception:
+            pass  # Repo already exists — ignore
         await self.client.commit(
             changes=[{"path": path, "content": content, "action": "MODIFY"}],
             message=f"Save persona: {persona.name}",
-            repo_name=self.repo_name
+            repo_name=self.repo_name,
+            namespace=persona.namespace
         )
 
     async def update(self, persona: AgentPersona) -> AgentPersona:
         await self.save(persona)
         return persona
 
-    async def find_by_id(self, persona_id: UUID) -> Optional[AgentPersona]:
-        path = f"{self.base_path}/{persona_id}.json"
+    async def find_by_id(self, persona_id: UUID, namespace: Optional[str] = None) -> Optional[AgentPersona]:
+        # Implementation changed: since filename might be the name, we list and find.
+        # But first, try the direct UUID path for legacy support or if name matches ID.
         try:
-            content = await self.client.read_file(path, repo_name=self.repo_name)
-            if not content:
-                return None
-            return AgentPersona.model_validate_json(content)
+            path = f"{self.base_path}/{persona_id}.json"
+            content = await self.client.read_file(path, repo_name=self.repo_name, namespace=namespace)
+            if content:
+                persona = AgentPersona.model_validate_json(content)
+                if persona.id == persona_id:
+                    return persona
         except Exception:
-            return None
+            pass
 
-    async def list_all(self) -> List[AgentPersona]:
-        entries = await self.client.list_files(self.base_path, repo_name=self.repo_name)
+        # Scan all files in the base_path
+        try:
+            entries = await self.client.list_files(self.base_path, repo_name=self.repo_name, namespace=namespace)
+            for entry in entries:
+                if not entry["is_dir"] and entry["name"].endswith(".json"):
+                    content = await self.client.read_file(f"{self.base_path}/{entry['name']}", repo_name=self.repo_name, namespace=namespace)
+                    if content:
+                        persona = AgentPersona.model_validate_json(content)
+                        if persona.id == persona_id:
+                            return persona
+        except Exception:
+            pass
+
+        return None
+
+    async def list_all(self, namespace: Optional[str] = None) -> List[AgentPersona]:
+        entries = await self.client.list_files(self.base_path, repo_name=self.repo_name, namespace=namespace)
         personas = []
         for entry in entries:
             if not entry["is_dir"] and entry["name"].endswith(".json"):
-                p = await self.find_by_id(UUID(entry["name"].replace(".json", "")))
-                if p:
-                    personas.append(p)
+                try:
+                    content = await self.client.read_file(f"{self.base_path}/{entry['name']}", repo_name=self.repo_name, namespace=namespace)
+                    if content:
+                        personas.append(AgentPersona.model_validate_json(content))
+                except Exception:
+                    continue
         return personas
+
+    async def delete(self, persona: AgentPersona) -> None:
+        filename = _sanitize_filename(persona.name) or str(persona.id)
+        path = f"{self.base_path}/{filename}.json"
+        
+        # We need to perform a commit with a DELETE action
+        # DocuHub's FileChange schema requires all fields including content
+        await self.client.commit(
+            changes=[{"path": path, "content": "", "action": "DELETE"}],
+            message=f"Delete persona: {persona.name}",
+            repo_name=self.repo_name,
+            namespace=persona.namespace
+        )
 
 
 # MySQLPersonaRepository is deleted as personas are now stored in DocuHub.

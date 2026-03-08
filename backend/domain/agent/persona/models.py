@@ -13,7 +13,8 @@ class AgentPersona(BaseModel):
     motivation: Optional[str] = None
     constraints: List[str] = Field(default_factory=list)
     guidelines: List[str] = Field(default_factory=list)
-    created_at: Optional[datetime] = None
+    namespace: str = "fiat-lux-system"
+    created_at: Optional[datetime] = Field(default_factory=datetime.now)
 
     def add_guideline(self, guideline: str):
         self.guidelines.append(guideline)
@@ -23,6 +24,9 @@ class PersonaSet(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     name: str
     description: Optional[str] = None
+    owner: str = "fiat-lux-system"
+    repository: str = "guideline-persona-repo"
+    branch: str = "main"
     personas: List[AgentPersona] = Field(default_factory=list)
     created_at: Optional[datetime] = None
 
