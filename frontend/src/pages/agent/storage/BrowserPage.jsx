@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import RepoSelector from '../../../components/storage/RepoSelector';
 import FileTree from '../../../components/storage/FileTree';
 import FileViewer from '../../../components/storage/FileViewer';
-import { FolderTree, Home, ChevronRight } from 'lucide-react';
+import { FolderTree, Home, ChevronRight, GitBranch } from 'lucide-react';
+import CustomSelect from '../../../components/ui/CustomSelect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -13,6 +14,19 @@ const BrowserPage = () => {
     const repoParam = searchParams.get('repo');
     const pathParam = searchParams.get('path') || '';
     const refParam = searchParams.get('ref') || 'main';
+
+    // 브랜치/태그 목록 조회
+    const { data: refs } = useQuery({
+        queryKey: ['refs', repoParam],
+        queryFn: async () => {
+            if (!repoParam) return { refs: [] };
+            const params = new URLSearchParams({ repo_name: repoParam });
+            const res = await fetch(`${API_BASE_URL}/storage/refs?${params}`);
+            if (!res.ok) return { refs: [] };
+            return res.json();
+        },
+        enabled: !!repoParam,
+    });
 
     // 저장소 목록 조회
     const { data: repos = [] } = useQuery({
@@ -76,7 +90,21 @@ const BrowserPage = () => {
                     </div>
                     <span className="text-sm font-semibold text-slate-300">Storage Explorer</span>
                 </div>
-                <div id="repo-selector-container">
+                <div id="repo-selector-container" className="flex items-center gap-3">
+                    {/* Branch selector */}
+                    {repoParam && (
+                        <CustomSelect
+                            id="branch-select"
+                            icon={<GitBranch className="w-4 h-4" />}
+                            value={refParam}
+                            options={refs?.refs?.map((r) => ({ value: r.name, label: r.name })) || []}
+                            onChange={(val) => {
+                                setSearchParams({ repo: repoParam, path: pathParam, ref: val });
+                                setSelectedFile(null);
+                            }}
+                            placeholder={refParam}
+                        />
+                    )}
                     <RepoSelector
                         repositories={repos}
                         selectedRepo={repoParam}
