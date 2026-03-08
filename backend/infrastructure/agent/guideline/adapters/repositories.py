@@ -12,6 +12,7 @@ from infrastructure.agent.common.adapters.docuhub_client import DocuHubClient
 class DocuHubGuidelineRepository(GuidelineRepository):
     def __init__(self, client: DocuHubClient):
         self.client = client
+        self.repo_name = "guideline-repo"
         self.base_path = "guidelines"
 
     async def save(self, guideline: Guideline) -> None:
@@ -24,13 +25,14 @@ class DocuHubGuidelineRepository(GuidelineRepository):
         }
         await self.client.commit(
             changes=[change],
-            message=f"Save guideline: {guideline.title}"
+            message=f"Save guideline: {guideline.title}",
+            repo_name=self.repo_name
         )
 
     async def find_by_id(self, guideline_id: UUID) -> Optional[Guideline]:
         path = f"{self.base_path}/{guideline_id}.json"
         try:
-            content = await self.client.read_file(path)
+            content = await self.client.read_file(path, repo_name=self.repo_name)
             if not content:
                 return None
             return Guideline.model_validate_json(content)
@@ -53,7 +55,7 @@ class DocuHubGuidelineRepository(GuidelineRepository):
         return None
 
     async def list_all(self) -> List[Guideline]:
-        entries = await self.client.list_files(self.base_path)
+        entries = await self.client.list_files(self.base_path, repo_name=self.repo_name)
         guidelines = []
         for entry in entries:
             if not entry["is_dir"] and entry["name"].endswith(".json"):
