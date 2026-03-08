@@ -47,6 +47,10 @@
     font-family: 'Outfit', sans-serif;
     letter-spacing: -0.03em;
     color: var(--color-text-main);
+    /* Fix backdrop-filter ghosting in some browsers */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
 }
 

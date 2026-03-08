@@ -7,9 +7,11 @@ import Modal from '../../../components/ui/Modal';
 import { Input, Textarea } from '../../../components/ui/Forms';
 import { ApiPersonaRepository } from '../../../infrastructure/agent/persona/adapters/ApiPersonaRepository';
 import { ApiGuidelineRepository } from '../../../infrastructure/agent/guideline/adapters/ApiGuidelineRepository';
+import { ApiStorageRepository } from '../../../infrastructure/agent/storage/adapters/ApiStorageRepository';
 
 const personaRepo = new ApiPersonaRepository();
 const guidelineRepo = new ApiGuidelineRepository();
+const storageRepo = new ApiStorageRepository();
 
 const PersonaManagement = () => {
     const queryClient = useQueryClient();
@@ -31,7 +33,13 @@ const PersonaManagement = () => {
         constraints: '',
         guidelines: []
     });
-    const [setData, setSetData] = useState({ name: '', description: '', persona_ids: [] });
+    const [setData, setSetData] = useState({
+        name: '',
+        description: '',
+        repository: 'persona-repo',
+        branch: 'main',
+        persona_ids: []
+    });
     const [editData, setEditData] = useState({
         name: '',
         role: '',
@@ -41,7 +49,13 @@ const PersonaManagement = () => {
         constraints: '',
         guidelines: []
     });
-    const [editSetData, setEditSetData] = useState({ name: '', description: '', persona_ids: [] });
+    const [editSetData, setEditSetData] = useState({
+        name: '',
+        description: '',
+        repository: 'persona-repo',
+        branch: 'main',
+        persona_ids: []
+    });
 
     useEffect(() => {
         if (editingPersona) {
@@ -62,6 +76,8 @@ const PersonaManagement = () => {
             setEditSetData({
                 name: editingSet.name || '',
                 description: editingSet.description || '',
+                repository: editingSet.repository || 'persona-repo',
+                branch: editingSet.branch || 'main',
                 persona_ids: (editingSet.personas || []).map(p => p.id)
             });
         }
@@ -81,6 +97,23 @@ const PersonaManagement = () => {
     const { data: guidelines, isLoading: loadingGuidelines } = useQuery({
         queryKey: ['guidelines'],
         queryFn: () => guidelineRepo.listGuidelines(),
+    });
+
+    const { data: repositories } = useQuery({
+        queryKey: ['repositories'],
+        queryFn: () => storageRepo.listRepositories(),
+    });
+
+    const { data: createSetRefs } = useQuery({
+        queryKey: ['refs', setData.repository],
+        queryFn: () => storageRepo.listRefs(setData.repository),
+        enabled: !!setData.repository,
+    });
+
+    const { data: editSetRefs } = useQuery({
+        queryKey: ['refs', editSetData.repository],
+        queryFn: () => storageRepo.listRefs(editSetData.repository),
+        enabled: !!editSetData.repository,
     });
 
     // Mutations
@@ -410,6 +443,37 @@ const PersonaManagement = () => {
                         value={setData.description}
                         onChange={(e) => setSetData({ ...setData, description: e.target.value })}
                     />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-300">Repository</label>
+                            <div className="flex gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                                {repositories?.filter(r => r.name.toLowerCase().includes('persona')).map(repo => (
+                                    <button
+                                        key={repo.name}
+                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${setData.repository === repo.name ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        onClick={() => setSetData({ ...setData, repository: repo.name, branch: 'main' })}
+                                    >
+                                        {repo.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-300">Branch / Ref</label>
+                            <select
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer"
+                                value={setData.branch}
+                                onChange={(e) => setSetData({ ...setData, branch: e.target.value })}
+                            >
+                                {createSetRefs?.map(ref => (
+                                    <option key={ref} value={ref}>{ref}</option>
+                                ))}
+                                {!createSetRefs?.length && <option value="main">main</option>}
+                            </select>
+                        </div>
+                    </div>
+
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
                             <label className="text-sm font-bold text-slate-300">Identity Selection</label>
@@ -556,7 +620,7 @@ const PersonaManagement = () => {
                         )}
 
                         <div className="pt-4 flex justify-end">
-                            <Button variant="outline" onClick={() => setSelectedPersona(null)}>Dismiss Architecture</Button>
+                            <Button variant="outline" onClick={() => setSelectedPersona(null)}>Close</Button>
                         </div>
                     </div>
                 )}
@@ -719,7 +783,7 @@ const PersonaManagement = () => {
                         </div>
 
                         <div className="pt-4 flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => setSelectedSet(null)}>Close Cluster</Button>
+                            <Button variant="outline" onClick={() => setSelectedSet(null)}>Close</Button>
                             <Button
                                 variant="secondary"
                                 onClick={() => {
@@ -728,7 +792,7 @@ const PersonaManagement = () => {
                                     setSelectedSet(null);
                                 }}
                             >
-                                Edit Cluster
+                                Edit
                             </Button>
                         </div>
                     </div>
@@ -757,6 +821,37 @@ const PersonaManagement = () => {
                         value={editSetData.description}
                         onChange={(e) => setEditSetData({ ...editSetData, description: e.target.value })}
                     />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-300">Repository</label>
+                            <div className="flex gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                                {repositories?.filter(r => r.name.toLowerCase().includes('persona')).map(repo => (
+                                    <button
+                                        key={repo.name}
+                                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${editSetData.repository === repo.name ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        onClick={() => setEditSetData({ ...editSetData, repository: repo.name, branch: 'main' })}
+                                    >
+                                        {repo.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-300">Branch / Ref</label>
+                            <select
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer"
+                                value={editSetData.branch}
+                                onChange={(e) => setEditSetData({ ...editSetData, branch: e.target.value })}
+                            >
+                                {editSetRefs?.map(ref => (
+                                    <option key={ref} value={ref}>{ref}</option>
+                                ))}
+                                {!editSetRefs?.length && <option value="main">main</option>}
+                            </select>
+                        </div>
+                    </div>
+
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
                             <label className="text-sm font-bold text-slate-300">Identity Selection</label>
