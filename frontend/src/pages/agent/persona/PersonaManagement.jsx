@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Users, User, ChevronRight, ShieldCheck, Zap } from 'lucide-react';
+import { Plus, Users, User, ChevronRight, ShieldCheck, Zap, Trash2 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -127,6 +127,20 @@ const PersonaManagement = () => {
         }
     });
 
+    const deletePersonaMutation = useMutation({
+        mutationFn: ({ id, namespace }) => personaRepo.deletePersona(id, namespace),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['personas'] });
+        }
+    });
+
+    const handleDeletePersona = (e, persona) => {
+        e.stopPropagation();
+        if (window.confirm(`"${persona.name || 'Unnamed'}" 페르소나를 삭제할까요?`)) {
+            deletePersonaMutation.mutate({ id: persona.id, namespace: persona.namespace });
+        }
+    };
+
     return (
         <div className="space-y-12 animate-slide-up pb-20">
             {/* Action Bar */}
@@ -250,12 +264,21 @@ const PersonaManagement = () => {
                                                 ? `CREATED ${new Date(persona.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).toUpperCase()}`
                                                 : 'DATE UNKNOWN'}
                                         </span>
-                                        <button
-                                            className="text-[11px] font-bold text-purple-600 hover:text-purple-700 transition-colors uppercase tracking-widest"
-                                            onClick={(e) => { e.stopPropagation(); setEditingPersona(persona); }}
-                                        >
-                                            Edit Prompt
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                className="text-[11px] font-bold text-purple-600 hover:text-purple-700 transition-colors uppercase tracking-widest"
+                                                onClick={(e) => { e.stopPropagation(); setEditingPersona(persona); }}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                                                onClick={(e) => handleDeletePersona(e, persona)}
+                                                title="Delete persona"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </Card>
                             ))

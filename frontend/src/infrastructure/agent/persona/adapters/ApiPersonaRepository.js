@@ -78,4 +78,13 @@ export class ApiPersonaRepository extends PersonaRepository {
         const item = await response.json();
         return new PersonaSet(item);
     }
+
+    async deletePersona(id, namespace = null) {
+        const params = namespace ? `?namespace=${encodeURIComponent(namespace)}` : '';
+        const response = await fetch(`${this.baseUrl}/personas/${id}${params}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete persona');
+        return true;
+    }
 }
