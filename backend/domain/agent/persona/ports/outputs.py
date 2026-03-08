@@ -43,6 +43,10 @@ class PersonaSetRepository(ABC):
     async def list_all(self) -> List[PersonaSet]:
         pass
 
+    @abstractmethod
+    async def delete(self, set_id: UUID) -> None:
+        pass
+
 
 class PersonaSelector(ABC):
     @abstractmethod

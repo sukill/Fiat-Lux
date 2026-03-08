@@ -5,7 +5,7 @@ import RepoSelector from '../../../components/storage/RepoSelector';
 import FileTree from '../../../components/storage/FileTree';
 import FileViewer from '../../../components/storage/FileViewer';
 import CreateRepoModal from '../../../components/storage/CreateRepoModal';
-import { FolderTree, Home, ChevronRight, GitBranch, Plus } from 'lucide-react';
+import { Home, ChevronRight, GitBranch, Plus } from 'lucide-react';
 import CustomSelect from '../../../components/ui/CustomSelect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -94,11 +94,19 @@ const BrowserPage = () => {
         <div id="browser-page" className="h-full flex flex-col bg-slate-900">
             {/* Sub-header for Browser controls */}
             <div id="browser-controls" className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
-                <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-blue-500/10 rounded-lg">
-                        <FolderTree className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <span className="text-sm font-semibold text-slate-300">Storage Explorer</span>
+                <div className="flex items-center gap-2">
+                    <RepoSelector
+                        repositories={repos}
+                        selectedRepo={repoParam}
+                        onSelect={handleRepoSelect}
+                    />
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="p-2 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 rounded-lg text-blue-400 hover:text-blue-300 transition-all shadow-sm"
+                        title="새 저장소 생성"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
                 </div>
                 <div id="repo-selector-container" className="flex items-center gap-3">
                     {/* Branch selector */}
@@ -115,20 +123,6 @@ const BrowserPage = () => {
                             placeholder={refParam}
                         />
                     )}
-                    <div className="flex items-center gap-2">
-                        <RepoSelector
-                            repositories={repos}
-                            selectedRepo={repoParam}
-                            onSelect={handleRepoSelect}
-                        />
-                        <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="p-2 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 rounded-lg text-blue-400 hover:text-blue-300 transition-all shadow-sm"
-                            title="새 저장소 생성"
-                        >
-                            <Plus className="w-4 h-4" />
-                        </button>
-                    </div>
                 </div>
             </div>
 

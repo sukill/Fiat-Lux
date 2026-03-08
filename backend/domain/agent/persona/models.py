@@ -14,6 +14,8 @@ class AgentPersona(BaseModel):
     constraints: List[str] = Field(default_factory=list)
     guidelines: List[str] = Field(default_factory=list)
     namespace: str = "fiat-lux-system"
+    repository: str = "persona-repo"
+    directory: Optional[str] = None
     created_at: Optional[datetime] = Field(default_factory=datetime.now)
 
     def add_guideline(self, guideline: str):

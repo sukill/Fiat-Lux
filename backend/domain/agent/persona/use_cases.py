@@ -19,6 +19,8 @@ class PersonaService:
         constraints: List[str] = None,
         guidelines: List[str] = None,
         namespace: str = "fiat-lux-system",
+        repository: str = "persona-repo",
+        directory: Optional[str] = None,
     ) -> AgentPersona:
         persona = AgentPersona(
             name=name,
@@ -29,6 +31,8 @@ class PersonaService:
             constraints=constraints or [],
             guidelines=guidelines or [],
             namespace=namespace,
+            repository=repository,
+            directory=directory,
         )
         await self.repo.save(persona)
         return persona
@@ -46,6 +50,7 @@ class PersonaService:
         goals: List[str] = None,
         constraints: List[str] = None,
         guidelines: List[str] = None,
+        directory: str = None,
     ) -> Optional[AgentPersona]:
         persona = await self.repo.find_by_id(persona_id)
         if not persona:
@@ -64,6 +69,8 @@ class PersonaService:
             persona.constraints = constraints
         if guidelines is not None:
             persona.guidelines = guidelines
+        if directory is not None:
+            persona.directory = directory
         return await self.repo.update(persona)
 
     async def list_personas(self, namespace: Optional[str] = None) -> List[AgentPersona]:
@@ -142,3 +149,10 @@ class PersonaService:
 
     async def list_persona_sets(self) -> List[PersonaSet]:
         return await self.set_repo.list_all()
+
+    async def delete_persona_set(self, set_id: UUID) -> bool:
+        persona_set = await self.set_repo.find_by_id(set_id)
+        if not persona_set:
+            return False
+        await self.set_repo.delete(set_id)
+        return True

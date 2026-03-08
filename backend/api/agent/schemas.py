@@ -95,6 +95,8 @@ class PersonaCreate(BaseModel):
     constraints: List[str] = Field(default_factory=list)
     guidelines: List[str] = Field(default_factory=list)
     namespace: Optional[str] = Field("fiat-lux-system", description="DocuHub namespace")
+    repository: str = Field("persona-repo", description="DocuHub repository name")
+    directory: Optional[str] = Field(None, description="Storage directory path")
 
 
 class PersonaUpdate(BaseModel):
@@ -105,6 +107,7 @@ class PersonaUpdate(BaseModel):
     motivation: Optional[str] = None
     constraints: Optional[List[str]] = None
     guidelines: Optional[List[str]] = None
+    directory: Optional[str] = None
 
 
 class PersonaSchema(BaseModel):
@@ -117,6 +120,8 @@ class PersonaSchema(BaseModel):
     constraints: List[str]
     guidelines: List[str]
     namespace: str
+    repository: str
+    directory: Optional[str]
     created_at: Optional[datetime]
 
     @classmethod
@@ -131,6 +136,8 @@ class PersonaSchema(BaseModel):
             constraints=persona.constraints,
             guidelines=persona.guidelines,
             namespace=persona.namespace,
+            repository=persona.repository,
+            directory=persona.directory,
             created_at=persona.created_at or datetime.now(),
         )
 

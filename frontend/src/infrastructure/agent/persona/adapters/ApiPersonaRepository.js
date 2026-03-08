@@ -87,4 +87,12 @@ export class ApiPersonaRepository extends PersonaRepository {
         if (!response.ok) throw new Error('Failed to delete persona');
         return true;
     }
+
+    async deletePersonaSet(id) {
+        const response = await fetch(`${this.baseUrl}/personas/sets/${id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete persona set');
+        return true;
+    }
 }

@@ -84,4 +84,20 @@ export class ApiGuidelineRepository extends GuidelineRepository {
         const item = await response.json();
         return new GuidelineSet(item);
     }
+
+    async deleteGuideline(id) {
+        const response = await fetch(`${this.baseUrl}/guidelines/${id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete guideline');
+        return await response.json();
+    }
+
+    async deleteGuidelineSet(id) {
+        const response = await fetch(`${this.baseUrl}/guidelines/sets/${id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete guideline set');
+        return await response.json();
+    }
 }

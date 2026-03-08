@@ -27,13 +27,16 @@ class DocuHubPersonaRepository(PersonaRepository):
 
     async def save(self, persona: AgentPersona) -> None:
         filename = _sanitize_filename(persona.name) or str(persona.id)
-        path = f"{self.base_path}/{filename}.json"
+        dir_path = f"{self.base_path}/{persona.directory}" if persona.directory else self.base_path
+        path = f"{dir_path}/{filename}.json"
         content = persona.model_dump_json(indent=2)
         # Ensure repo exists in the target namespace before committing
         try:
             await self.client.init_repo(repo_name=self.repo_name, namespace=persona.namespace)
         except Exception:
             pass  # Repo already exists — ignore
+        
+        # DocuHub commit handles upsert/modify
         await self.client.commit(
             changes=[{"path": path, "content": content, "action": "MODIFY"}],
             message=f"Save persona: {persona.name}",
@@ -46,44 +49,39 @@ class DocuHubPersonaRepository(PersonaRepository):
         return persona
 
     async def find_by_id(self, persona_id: UUID, namespace: Optional[str] = None) -> Optional[AgentPersona]:
-        # Implementation changed: since filename might be the name, we list and find.
-        # But first, try the direct UUID path for legacy support or if name matches ID.
-        try:
-            path = f"{self.base_path}/{persona_id}.json"
-            content = await self.client.read_file(path, repo_name=self.repo_name, namespace=namespace)
-            if content:
-                persona = AgentPersona.model_validate_json(content)
-                if persona.id == persona_id:
-                    return persona
-        except Exception:
-            pass
-
-        # Scan all files in the base_path
-        try:
-            entries = await self.client.list_files(self.base_path, repo_name=self.repo_name, namespace=namespace)
-            for entry in entries:
-                if not entry["is_dir"] and entry["name"].endswith(".json"):
-                    content = await self.client.read_file(f"{self.base_path}/{entry['name']}", repo_name=self.repo_name, namespace=namespace)
-                    if content:
-                        persona = AgentPersona.model_validate_json(content)
-                        if persona.id == persona_id:
-                            return persona
-        except Exception:
-            pass
-
+        all_personas = await self.list_all(namespace=namespace)
+        for p in all_personas:
+            if p.id == persona_id:
+                return p
         return None
 
     async def list_all(self, namespace: Optional[str] = None) -> List[AgentPersona]:
-        entries = await self.client.list_files(self.base_path, repo_name=self.repo_name, namespace=namespace)
         personas = []
-        for entry in entries:
-            if not entry["is_dir"] and entry["name"].endswith(".json"):
-                try:
-                    content = await self.client.read_file(f"{self.base_path}/{entry['name']}", repo_name=self.repo_name, namespace=namespace)
-                    if content:
-                        personas.append(AgentPersona.model_validate_json(content))
-                except Exception:
-                    continue
+
+        async def _recursive_list(current_path: str, relative_dir: Optional[str] = None):
+            try:
+                entries = await self.client.list_files(current_path, repo_name=self.repo_name, namespace=namespace)
+            except Exception:
+                return
+
+            for entry in entries:
+                full_path = f"{current_path}/{entry['name']}"
+                if entry["is_dir"]:
+                    next_rel_dir = f"{relative_dir}/{entry['name']}" if relative_dir else entry["name"]
+                    await _recursive_list(full_path, next_rel_dir)
+                elif entry["name"].endswith(".json"):
+                    try:
+                        content = await self.client.read_file(full_path, repo_name=self.repo_name, namespace=namespace)
+                        if content:
+                            persona = AgentPersona.model_validate_json(content)
+                            # Ensure directory field is set correctly from the filesystem if missing in JSON
+                            if not persona.directory:
+                                persona.directory = relative_dir
+                            personas.append(persona)
+                    except Exception:
+                        continue
+
+        await _recursive_list(self.base_path)
         return personas
 
     async def delete(self, persona: AgentPersona) -> None:
@@ -194,3 +192,9 @@ class MySQLPersonaSetRepository(PersonaSetRepository):
             if persona_set:
                 result.append(persona_set)
         return result
+
+    async def delete(self, set_id: UUID) -> None:
+        orm_set = self.session.query(PersonaSetORM).filter_by(id=str(set_id)).first()
+        if orm_set:
+            self.session.delete(orm_set)
+            self.session.commit()

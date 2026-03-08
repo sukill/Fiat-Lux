@@ -33,6 +33,11 @@ class GuidelineRepository(ABC):
         """가이드라인 폴더가 포함된 저장소 목록을 반환합니다."""
         pass
 
+    @abstractmethod
+    async def delete(self, guideline: Guideline) -> None:
+        """가이드라인을 삭제합니다."""
+        pass
+
 
 class GuidelineSetRepository(ABC):
     @abstractmethod
@@ -45,4 +50,9 @@ class GuidelineSetRepository(ABC):
 
     @abstractmethod
     async def list_all(self) -> List[GuidelineSet]:
+        pass
+
+    @abstractmethod
+    async def delete(self, set_id: UUID) -> None:
+        """가이드라인 세트를 삭제합니다."""
         pass

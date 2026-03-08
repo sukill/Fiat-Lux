@@ -119,3 +119,21 @@ async def get_guideline(
     if not guideline:
         raise HTTPException(status_code=404, detail="Guideline not found")
     return GuidelineSchema.from_domain(guideline)
+
+
+@router.delete("/{guideline_id}")
+async def delete_guideline(
+    guideline_id: UUID, service: GuidelineService = Depends(get_guideline_service)
+):
+    success = await service.delete_guideline(guideline_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Guideline not found")
+    return {"status": "success"}
+
+
+@router.delete("/sets/{set_id}")
+async def delete_guideline_set(
+    set_id: UUID, service: GuidelineService = Depends(get_guideline_service)
+):
+    await service.delete_guideline_set(set_id)
+    return {"status": "success"}

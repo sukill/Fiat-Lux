@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Book, Library, ChevronRight, FileText, Compass, ExternalLink, Search, List, LayoutGrid, Hash, Filter } from 'lucide-react';
+import { Plus, Book, Library, ChevronRight, FileText, Compass, ExternalLink, Search, List, LayoutGrid, Hash, Filter, Trash2 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -164,6 +164,36 @@ const GuidelineManagement = () => {
         }
     });
 
+    const deleteGuidelineMutation = useMutation({
+        mutationFn: (id) => guidelineRepo.deleteGuideline(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['guidelines'] });
+            setSelectedGuideline(null);
+        }
+    });
+
+    const deleteSetMutation = useMutation({
+        mutationFn: (id) => guidelineRepo.deleteGuidelineSet(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['guidelineSets'] });
+            setSelectedSet(null);
+        }
+    });
+
+    const handleDeleteGuideline = (e, guideline) => {
+        e.stopPropagation();
+        if (window.confirm(`"${guideline.title}" 가이드라인을 삭제하시겠습니까?`)) {
+            deleteGuidelineMutation.mutate(guideline.id);
+        }
+    };
+
+    const handleDeleteSet = (e, set) => {
+        e.stopPropagation();
+        if (window.confirm(`"${set.name}" 가이드라인 세트를 삭제하시겠습니까?`)) {
+            deleteSetMutation.mutate(set.id);
+        }
+    };
+
     const { data: guidelineRefs } = useQuery({
         queryKey: ['storage-refs', guidelineData.repository],
         queryFn: () => storageRepo.listRefs(guidelineData.repository),
@@ -178,9 +208,9 @@ const GuidelineManagement = () => {
 
     // Filtered Data
     const filteredGuidelines = guidelines?.filter(g =>
-        g.title.toLowerCase().includes(guidelineSearch.toLowerCase()) ||
-        g.content.toLowerCase().includes(guidelineSearch.toLowerCase()) ||
-        g.directory?.toLowerCase().includes(guidelineSearch.toLowerCase())
+        (g.title || '').toLowerCase().includes(guidelineSearch.toLowerCase()) ||
+        (g.content || '').toLowerCase().includes(guidelineSearch.toLowerCase()) ||
+        (g.directory || '').toLowerCase().includes(guidelineSearch.toLowerCase())
     );
 
     const directories = React.useMemo(() => {
@@ -199,8 +229,8 @@ const GuidelineManagement = () => {
     }, [guidelines]);
 
     const filteredSets = guidelineSets?.filter(set => {
-        const matchesSearch = set.name.toLowerCase().includes(setSearch.toLowerCase()) ||
-            set.description?.toLowerCase().includes(setSearch.toLowerCase());
+        const matchesSearch = (set.name || '').toLowerCase().includes(setSearch.toLowerCase()) ||
+            (set.description || '').toLowerCase().includes(setSearch.toLowerCase());
         const matchesRepo = activeRepoTab === 'All' || set.repository === activeRepoTab;
         return matchesSearch && matchesRepo;
     });
@@ -287,9 +317,17 @@ const GuidelineManagement = () => {
                                         <p className="text-slate-500 text-[12px] line-clamp-2 leading-relaxed font-medium">
                                             {set.description || "Synthesized guideline container."}
                                         </p>
-                                        <div className="flex items-center gap-2 pt-1">
-                                            <Hash size={12} className="text-slate-300" />
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{set.repository}</span>
+                                        <div className="flex items-center justify-between pt-1">
+                                            <div className="flex items-center gap-2">
+                                                <Hash size={12} className="text-slate-300" />
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{set.repository}</span>
+                                            </div>
+                                            <button
+                                                className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                onClick={(e) => handleDeleteSet(e, set)}
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
                                         </div>
                                     </div>
                                 </Card>
@@ -439,6 +477,15 @@ const GuidelineManagement = () => {
                                                     {guideline.content}
                                                 </p>
                                             </div>
+                                        </div>
+                                        <div className="px-6 py-3 bg-slate-50/50 border-t border-slate-100/50 flex justify-between items-center rounded-b-[32px]">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest"> ID: {guideline.id.slice(0, 8)}</span>
+                                            <button
+                                                className="p-1.5 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                                                onClick={(e) => handleDeleteGuideline(e, guideline)}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
                                         </div>
                                     </Card>
                                 ))
@@ -657,6 +704,13 @@ const GuidelineManagement = () => {
                         <div className="flex justify-end pt-4 gap-3">
                             <Button variant="outline" onClick={() => setSelectedGuideline(null)}>Close</Button>
                             <Button
+                                variant="destructive"
+                                loading={deleteGuidelineMutation.isPending}
+                                onClick={() => handleDeleteGuideline({ stopPropagation: () => { } }, selectedGuideline)}
+                            >
+                                <Trash2 size={16} className="mr-2" /> Delete
+                            </Button>
+                            <Button
                                 variant="secondary"
                                 onClick={() => {
                                     setEditingGuideline(selectedGuideline);
@@ -729,6 +783,13 @@ const GuidelineManagement = () => {
 
                         <div className="flex justify-end pt-4 gap-3">
                             <Button variant="outline" onClick={() => setSelectedSet(null)}>Close</Button>
+                            <Button
+                                variant="destructive"
+                                loading={deleteSetMutation.isPending}
+                                onClick={() => handleDeleteSet({ stopPropagation: () => { } }, selectedSet)}
+                            >
+                                <Trash2 size={16} className="mr-2" /> Delete Set
+                            </Button>
                             <Button
                                 variant="secondary"
                                 onClick={() => {

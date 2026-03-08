@@ -126,3 +126,14 @@ class GuidelineService:
             
         await self.set_repo.save(guideline_set)
         return guideline_set
+
+    async def delete_guideline(self, guideline_id: UUID) -> bool:
+        guideline = await self.repo.find_by_id(guideline_id)
+        if not guideline:
+            return False
+        await self.repo.delete(guideline)
+        return True
+
+    async def delete_guideline_set(self, set_id: UUID) -> bool:
+        await self.set_repo.delete(set_id)
+        return True

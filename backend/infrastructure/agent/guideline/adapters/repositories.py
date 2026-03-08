@@ -210,6 +210,18 @@ class DocuHubGuidelineRepository(GuidelineRepository):
             
         return guidelines
 
+    async def delete(self, guideline: Guideline) -> None:
+        filename = _sanitize_filename(guideline.title) or str(guideline.id)
+        dir_path = f"{self.base_path}/{guideline.directory}" if guideline.directory else self.base_path
+        path = f"{dir_path}/{filename}.md"
+        
+        await self.client.commit(
+            changes=[{"path": path, "content": "", "action": "DELETE"}],
+            message=f"Delete guideline: {guideline.title}",
+            repo_name=guideline.repository,
+            target_ref=guideline.branch
+        )
+
 
 class InMemoryGuidelineRepository(GuidelineRepository):
     def __init__(self):
@@ -237,6 +249,10 @@ class InMemoryGuidelineRepository(GuidelineRepository):
 
     async def list_all(self) -> List[Guideline]:
         return list(self._guidelines.values())
+
+    async def delete(self, guideline: Guideline) -> None:
+        if guideline.id in self._guidelines:
+            del self._guidelines[guideline.id]
 
 
 from sqlalchemy.orm import Session
@@ -307,3 +323,9 @@ class MySQLGuidelineSetRepository(GuidelineSetRepository):
             if guideline_set:
                 result.append(guideline_set)
         return result
+
+    async def delete(self, set_id: UUID) -> None:
+        orm_set = self.session.query(GuidelineSetORM).filter_by(id=str(set_id)).first()
+        if orm_set:
+            self.session.delete(orm_set)
+            self.session.commit()

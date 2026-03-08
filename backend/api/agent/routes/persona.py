@@ -79,6 +79,8 @@ async def create_persona(
         constraints=request.constraints,
         guidelines=request.guidelines,
         namespace=request.namespace,
+        repository=request.repository,
+        directory=request.directory,
     )
     return PersonaSchema.from_domain(persona)
 
@@ -119,6 +121,7 @@ async def update_persona(
         goals=request.goals,
         constraints=request.constraints,
         guidelines=request.guidelines,
+        directory=request.directory,
     )
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found")
@@ -135,4 +138,15 @@ async def delete_persona(
     success = await service.delete_persona(persona_id, namespace=namespace)
     if not success:
         raise HTTPException(status_code=404, detail="Persona not found")
+    return {"status": "success"}
+
+
+@router.delete("/sets/{set_id}")
+async def delete_persona_set(
+    set_id: UUID, service: PersonaService = Depends(get_persona_service)
+):
+    """지정된 페르소나 세트를 삭제합니다."""
+    success = await service.delete_persona_set(set_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Persona set not found")
     return {"status": "success"}
