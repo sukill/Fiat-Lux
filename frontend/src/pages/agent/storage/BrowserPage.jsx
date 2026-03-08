@@ -20,14 +20,15 @@ const BrowserPage = () => {
     const [selectedFile, setSelectedFile] = useState(null);
 
     // 브랜치/태그 목록 조회
-    const { data: refs } = useQuery({
-        queryKey: ['refs', repoParam],
+    const { data: refs = [] } = useQuery({
+        queryKey: ['storage-refs', repoParam],
         queryFn: async () => {
-            if (!repoParam) return { refs: [] };
+            if (!repoParam) return [];
             const params = new URLSearchParams({ repo_name: repoParam });
             const res = await fetch(`${API_BASE_URL}/storage/refs?${params}`);
-            if (!res.ok) return { refs: [] };
-            return res.json();
+            if (!res.ok) return [];
+            const data = await res.json();
+            return data.refs || [];
         },
         enabled: !!repoParam,
     });
@@ -106,7 +107,7 @@ const BrowserPage = () => {
                             id="branch-select"
                             icon={<GitBranch className="w-4 h-4" />}
                             value={refParam}
-                            options={refs?.refs?.map((r) => ({ value: r.name, label: r.name })) || []}
+                            options={refs?.map((r) => ({ value: r.name, label: r.name })) || []}
                             onChange={(val) => {
                                 setSearchParams({ repo: repoParam, path: pathParam, ref: val });
                                 setSelectedFile(null);

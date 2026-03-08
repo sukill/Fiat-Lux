@@ -105,13 +105,13 @@ const PersonaManagement = () => {
     });
 
     const { data: createSetRefs } = useQuery({
-        queryKey: ['refs', setData.repository],
+        queryKey: ['storage-refs', setData.repository],
         queryFn: () => storageRepo.listRefs(setData.repository),
         enabled: !!setData.repository,
     });
 
     const { data: editSetRefs } = useQuery({
-        queryKey: ['refs', editSetData.repository],
+        queryKey: ['storage-refs', editSetData.repository],
         queryFn: () => storageRepo.listRefs(editSetData.repository),
         enabled: !!editSetData.repository,
     });
@@ -467,7 +467,7 @@ const PersonaManagement = () => {
                                 onChange={(e) => setSetData({ ...setData, branch: e.target.value })}
                             >
                                 {createSetRefs?.map(ref => (
-                                    <option key={ref} value={ref}>{ref}</option>
+                                    <option key={ref.name} value={ref.name}>{ref.name}</option>
                                 ))}
                                 {!createSetRefs?.length && <option value="main">main</option>}
                             </select>
@@ -845,7 +845,7 @@ const PersonaManagement = () => {
                                 onChange={(e) => setEditSetData({ ...editSetData, branch: e.target.value })}
                             >
                                 {editSetRefs?.map(ref => (
-                                    <option key={ref} value={ref}>{ref}</option>
+                                    <option key={ref.name} value={ref.name}>{ref.name}</option>
                                 ))}
                                 {!editSetRefs?.length && <option value="main">main</option>}
                             </select>

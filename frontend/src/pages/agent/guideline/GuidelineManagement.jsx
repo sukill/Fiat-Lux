@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Book, Library, ChevronRight, FileText, Compass, ExternalLink } from 'lucide-react';
+import { Plus, Book, Library, ChevronRight, FileText, Compass, ExternalLink, Search, List, LayoutGrid, Hash, Filter } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -36,6 +36,12 @@ const GuidelineManagement = () => {
         branch: 'main',
         guideline_ids: []
     });
+
+    // Search & View States
+    const [guidelineSearch, setGuidelineSearch] = useState('');
+    const [setSearch, setSetSearch] = useState('');
+    const [activeRepoTab, setActiveRepoTab] = useState('All');
+    const [viewMode, setViewMode] = useState('list'); // 'grid' or 'list'
 
     React.useEffect(() => {
         if (editingSet) {
@@ -111,8 +117,23 @@ const GuidelineManagement = () => {
         }
     });
 
+    // Filtered Data
+    const filteredGuidelines = guidelines?.filter(g =>
+        g.title.toLowerCase().includes(guidelineSearch.toLowerCase()) ||
+        g.content.toLowerCase().includes(guidelineSearch.toLowerCase())
+    );
+
+    const filteredSets = guidelineSets?.filter(set => {
+        const matchesSearch = set.name.toLowerCase().includes(setSearch.toLowerCase()) ||
+            set.description?.toLowerCase().includes(setSearch.toLowerCase());
+        const matchesRepo = activeRepoTab === 'All' || set.repository === activeRepoTab;
+        return matchesSearch && matchesRepo;
+    });
+
+    const repoList = ['All', ...new Set(guidelineSets?.map(s => s.repository) || [])];
+
     return (
-        <div className="space-y-12 animate-slide-up pb-20">
+        <div className="space-y-10 animate-slide-up pb-20 max-w-[1600px] mx-auto px-4">
             {/* Action Bar */}
             <div className="flex justify-between items-center bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm">
                 <div className="hidden md:block">
@@ -128,112 +149,212 @@ const GuidelineManagement = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-12 lg:gap-20 items-start">
-                {/* Guideline Sets Section */}
-                <section className="xl:col-span-2">
-                    <div className="flex items-center gap-3 mb-10">
-                        <div className="p-3 rounded-xl bg-purple-50 text-purple-600 shadow-sm border border-purple-100">
-                            <Library size={28} />
+            <div className="flex flex-col lg:flex-row gap-8 items-start">
+                {/* Left Sidebar: Guideline Sets */}
+                <aside className="w-full lg:w-1/3 xl:w-1/4 space-y-6 sticky top-24">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 shadow-sm border border-purple-100">
+                                <Library size={22} />
+                            </div>
+                            <h3 className="text-xl font-bold tracking-tight text-[#1E293B]">Sets</h3>
                         </div>
-                        <h3 className="text-3xl font-bold tracking-tight text-[#1E293B]">Guideline Sets</h3>
-                        <div className="h-px flex-1 bg-slate-100 ml-8" />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-8">
+                    {/* Repo Tabs */}
+                    <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-100 overflow-x-auto scrollbar-none">
+                        {repoList.map(repo => (
+                            <button
+                                key={repo}
+                                onClick={() => setActiveRepoTab(repo)}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeRepoTab === repo
+                                    ? 'bg-white text-purple-600 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                                    }`}
+                            >
+                                {repo}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Sets Search */}
+                    <div className="relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-purple-500 transition-colors" size={16} />
+                        <input
+                            type="text"
+                            placeholder="Search sets..."
+                            className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-purple-500/10 focus:border-purple-500 transition-all"
+                            value={setSearch}
+                            onChange={(e) => setSetSearch(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-2 scrollbar-thin">
                         {loadingSets ? (
-                            [1, 2, 3].map(i => <div key={i} className="h-48 glass-panel animate-pulse" />)
+                            [1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-50 animate-pulse rounded-2xl" />)
                         ) : (
-                            guidelineSets?.map(set => (
+                            filteredSets?.map(set => (
                                 <Card
                                     key={set.id}
-                                    className="group cursor-pointer !p-0"
+                                    className={`group cursor-pointer transition-all border-l-4 !p-5 ${selectedSet?.id === set.id
+                                        ? 'border-l-purple-600 bg-purple-50/30'
+                                        : 'border-l-transparent hover:border-l-purple-300'
+                                        }`}
                                     onClick={() => setSelectedSet(set)}
                                 >
-                                    <div className="p-6">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="space-y-1">
-                                                <h4 className="text-xl font-bold text-[#1E293B] group-hover:text-purple-600 transition-colors">{set.name}</h4>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                    {set.guidelines?.length || 0} Rule Sets Attached
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <h4 className="font-bold text-slate-800 text-sm group-hover:text-purple-600 transition-colors line-clamp-1">{set.name}</h4>
+                                            <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100 uppercase tracking-widest shrink-0">
+                                                {set.guidelines?.length || 0}
+                                            </span>
+                                        </div>
+                                        <p className="text-slate-500 text-[12px] line-clamp-2 leading-relaxed font-medium">
+                                            {set.description || "Synthesized guideline container."}
+                                        </p>
+                                        <div className="flex items-center gap-2 pt-1">
+                                            <Hash size={12} className="text-slate-300" />
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{set.repository}</span>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))
+                        )}
+                        {filteredSets?.length === 0 && (
+                            <div className="text-center py-10">
+                                <p className="text-sm text-slate-400 font-bold">No sets found.</p>
+                            </div>
+                        )}
+                    </div>
+                </aside>
+
+                {/* Main Content: Guidelines List */}
+                <main className="flex-1 space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 shadow-sm border border-indigo-100">
+                                <FileText size={22} />
+                            </div>
+                            <h3 className="text-xl font-bold tracking-tight text-[#1E293B]">Guideline Modules</h3>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <div className="relative group min-w-[240px]">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Find a module..."
+                                    className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
+                                    value={guidelineSearch}
+                                    onChange={(e) => setGuidelineSearch(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                >
+                                    <List size={18} />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                >
+                                    <LayoutGrid size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {viewMode === 'list' ? (
+                        <div className="bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-sm">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/50 border-bottom border-slate-100">
+                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Module Information</th>
+                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Last Updated</th>
+                                        <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {loadingGuidelines ? (
+                                        [1, 2, 3, 4, 5].map(i => (
+                                            <tr key={i} className="animate-pulse">
+                                                <td colSpan={3} className="px-8 py-6 h-16 bg-slate-50/30" />
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        filteredGuidelines?.map(guideline => (
+                                            <tr
+                                                key={guideline.id}
+                                                className="group hover:bg-indigo-50/30 transition-colors cursor-pointer"
+                                                onClick={() => setSelectedGuideline(guideline)}
+                                            >
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-indigo-400 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all shadow-sm">
+                                                            <Book size={20} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{guideline.title}</p>
+                                                            <p className="text-[11px] text-slate-400 font-medium line-clamp-1 max-w-sm">{guideline.content}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <span className="text-[11px] font-bold text-slate-500 bg-slate-100/50 px-2.5 py-1 rounded-lg">
+                                                        {guideline.createdAt ? new Date(guideline.createdAt).toLocaleDateString() : '—'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-6 text-right text-indigo-400 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                                                    <ChevronRight size={20} />
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                            {filteredGuidelines?.length === 0 && (
+                                <div className="py-20 text-center">
+                                    <p className="text-slate-400 font-bold">No guideline modules match your search.</p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {loadingGuidelines ? (
+                                [1, 2, 3, 4].map(i => <div key={i} className="h-48 bg-slate-50 animate-pulse rounded-[32px]" />)
+                            ) : (
+                                filteredGuidelines?.map(guideline => (
+                                    <Card
+                                        key={guideline.id}
+                                        className="!p-0 border-white/5 cursor-pointer group hover:border-indigo-300/30 transition-all !rounded-[32px]"
+                                        onClick={() => setSelectedGuideline(guideline)}
+                                    >
+                                        <div className="p-6">
+                                            <div className="flex items-center gap-4 mb-5">
+                                                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                                    <Book size={24} />
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <h4 className="text-lg font-bold text-[#1E293B] leading-tight group-hover:text-indigo-600 transition-colors">{guideline.title}</h4>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                        {guideline.createdAt ? new Date(guideline.createdAt).toLocaleDateString().toUpperCase() : 'NO DATE'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 group-hover:border-indigo-100 transition-all overflow-hidden h-32">
+                                                <p className="text-xs text-slate-600 line-clamp-4 whitespace-pre-wrap leading-relaxed font-medium">
+                                                    {guideline.content}
                                                 </p>
                                             </div>
-                                            <div className="p-2 rounded-lg bg-slate-50 group-hover:bg-purple-50 transition-colors">
-                                                <ChevronRight className="text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" size={20} />
-                                            </div>
                                         </div>
-                                        <p className="text-slate-600 text-sm mb-6 line-clamp-2 leading-relaxed font-medium">
-                                            {set.description || "Synthesized guideline container for AI operational alignment."}
-                                        </p>
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-100 uppercase tracking-wider">
-                                                {set.guidelines?.length || 0} Modules
-                                            </div>
-                                            <div className="text-[10px] font-bold text-purple-400 group-hover:text-purple-600 uppercase tracking-widest transition-colors flex items-center gap-1.5 font-heading">
-                                                View Details <ChevronRight size={12} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-purple-50 group-hover:bg-purple-100 transition-colors" />
-                                </Card>
-                            ))
-                        )}
-                    </div>
-                </section>
-
-                {/* Individual Guidelines Section */}
-                <section className="xl:col-span-3">
-                    <div className="flex items-center gap-3 mb-10">
-                        <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 shadow-sm border border-indigo-100">
-                            <FileText size={28} />
+                                    </Card>
+                                ))
+                            )}
                         </div>
-                        <h3 className="text-3xl font-bold tracking-tight text-[#1E293B]">Guidelines</h3>
-                        <div className="h-px flex-1 bg-slate-100 ml-8" />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8">
-                        {loadingGuidelines ? (
-                            [1, 2, 3].map(i => <div key={i} className="h-48 glass-panel animate-pulse" />)
-                        ) : (
-                            guidelines?.map(guideline => (
-                                <Card
-                                    key={guideline.id}
-                                    className="!p-0 border-white/5 cursor-pointer group hover:border-indigo-300/30 transition-all"
-                                    onClick={() => setSelectedGuideline(guideline)}
-                                >
-                                    <div className="p-6">
-                                        <div className="flex items-center gap-4 mb-5">
-                                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                                                <Book size={24} />
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <h4 className="text-lg font-bold text-[#1E293B] leading-tight">{guideline.title}</h4>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                    {new Date(guideline.createdAt).toLocaleDateString().toUpperCase()}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 group hover:border-indigo-100 transition-all">
-                                            <pre className="text-xs text-slate-600 line-clamp-6 whitespace-pre-wrap leading-relaxed font-medium">
-                                                {guideline.content}
-                                            </pre>
-                                        </div>
-                                    </div>
-                                    <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-end items-center">
-                                        <button
-                                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors uppercase tracking-widest flex items-center gap-1.5 font-heading"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedGuideline(guideline);
-                                            }}
-                                        >
-                                            View Details <ChevronRight size={14} />
-                                        </button>
-                                    </div>
-                                </Card>
-                            ))
-                        )}
-                    </div>
-                </section>
+                    )}
+                </main>
             </div>
 
             {/* Creation Modals (Premium Polish) */}
@@ -385,7 +506,7 @@ const GuidelineManagement = () => {
                                 <div className="space-y-1">
                                     <h4 className="text-xl font-bold text-slate-900 leading-tight">{selectedGuideline.title}</h4>
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                        EST. {new Date(selectedGuideline.createdAt).toLocaleDateString().toUpperCase()}
+                                        EST. {selectedGuideline.createdAt ? new Date(selectedGuideline.createdAt).toLocaleDateString().toUpperCase() : 'PENDING'}
                                     </span>
                                 </div>
                             </div>
