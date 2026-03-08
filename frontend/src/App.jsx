@@ -6,6 +6,7 @@ import Dashboard from './pages/agent/Dashboard'
 import PersonaManagement from './pages/agent/persona/PersonaManagement'
 import GuidelineManagement from './pages/agent/guideline/GuidelineManagement'
 import WorkflowExecution from './pages/agent/workflow/WorkflowExecution'
+import BrowserPage from './pages/agent/storage/BrowserPage'
 
 const queryClient = new QueryClient()
 
@@ -13,14 +14,13 @@ function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <Router>
-                <MainLayout>
-                    <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/personas" element={<PersonaManagement />} />
-                        <Route path="/guidelines" element={<GuidelineManagement />} />
-                        <Route path="/workflows" element={<WorkflowExecution />} />
-                    </Routes>
-                </MainLayout>
+                <Routes>
+                    <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
+                    <Route path="/personas" element={<MainLayout><PersonaManagement /></MainLayout>} />
+                    <Route path="/guidelines" element={<MainLayout><GuidelineManagement /></MainLayout>} />
+                    <Route path="/workflows" element={<MainLayout><WorkflowExecution /></MainLayout>} />
+                    <Route path="/browser" element={<MainLayout fullBleed={true}><BrowserPage /></MainLayout>} />
+                </Routes>
             </Router>
         </QueryClientProvider>
     )

@@ -2,7 +2,7 @@ import { Persona, PersonaSet } from '../../../../domain/agent/persona/models/Per
 import { PersonaRepository } from '../../../../domain/agent/persona/ports/PersonaRepository';
 
 export class ApiPersonaRepository extends PersonaRepository {
-    constructor(baseUrl = 'http://localhost:8000') {
+    constructor(baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000') {
         super();
         this.baseUrl = baseUrl;
     }
