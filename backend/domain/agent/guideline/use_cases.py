@@ -12,8 +12,21 @@ class GuidelineService:
         self.repo = repo
         self.set_repo = set_repo
 
-    async def create_guideline(self, title: str, content: str) -> Guideline:
-        guideline = Guideline(title=title, content=content)
+    async def create_guideline(
+        self, 
+        title: str, 
+        content: str, 
+        directory: Optional[str] = None,
+        repository: str = "guideline-repo",
+        branch: str = "main"
+    ) -> Guideline:
+        guideline = Guideline(
+            title=title, 
+            content=content, 
+            directory=directory,
+            repository=repository,
+            branch=branch
+        )
         await self.repo.save(guideline)
         return guideline
 
@@ -57,8 +70,11 @@ class GuidelineService:
     async def update_guideline(
         self,
         guideline_id: UUID,
-        title: str = None,
-        content: str = None
+        title: Optional[str] = None,
+        content: Optional[str] = None,
+        directory: Optional[str] = None,
+        repository: Optional[str] = None,
+        branch: Optional[str] = None
     ) -> Optional[Guideline]:
         guideline = await self.repo.find_by_id(guideline_id)
         if not guideline:
@@ -68,6 +84,12 @@ class GuidelineService:
             guideline.title = title
         if content is not None:
             guideline.content = content
+        if directory is not None:
+            guideline.directory = directory
+        if repository is not None:
+            guideline.repository = repository
+        if branch is not None:
+            guideline.branch = branch
             
         await self.repo.save(guideline)
         return guideline

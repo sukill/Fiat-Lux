@@ -21,7 +21,13 @@ const GuidelineManagement = () => {
     const [isEditSetModalOpen, setIsEditSetModalOpen] = useState(false);
 
     // Form States
-    const [guidelineData, setGuidelineData] = useState({ title: '', content: '' });
+    const [guidelineData, setGuidelineData] = useState({
+        title: '',
+        content: '',
+        directory: '',
+        repository: 'guideline-repo',
+        branch: 'main'
+    });
     const [setData, setSetData] = useState({
         name: '',
         description: '',
@@ -71,14 +77,19 @@ const GuidelineManagement = () => {
         queryFn: () => storageRepo.listRepositories(),
     });
 
+    const { data: guidelineRepositories } = useQuery({
+        queryKey: ['guideline-repositories'],
+        queryFn: () => guidelineRepo.listGuidelineRepositories(),
+    });
+
     const { data: branchRefs } = useQuery({
-        queryKey: ['refs', setData.repository],
+        queryKey: ['storage-refs', setData.repository],
         queryFn: () => storageRepo.listRefs(setData.repository),
         enabled: !!setData.repository,
     });
 
     const { data: editSetRefs } = useQuery({
-        queryKey: ['refs', editSetData.repository],
+        queryKey: ['storage-refs', editSetData.repository],
         queryFn: () => storageRepo.listRefs(editSetData.repository),
         enabled: !!editSetData.repository,
     });
@@ -89,7 +100,13 @@ const GuidelineManagement = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['guidelines'] });
             setIsGuidelineModalOpen(false);
-            setGuidelineData({ title: '', content: '' });
+            setGuidelineData({
+                title: '',
+                content: '',
+                directory: '',
+                repository: 'guideline-repo',
+                branch: 'main'
+            });
         }
     });
 
@@ -117,11 +134,20 @@ const GuidelineManagement = () => {
         }
     });
 
+    const { data: guidelineRefs } = useQuery({
+        queryKey: ['storage-refs', guidelineData.repository],
+        queryFn: () => storageRepo.listRefs(guidelineData.repository),
+        enabled: !!guidelineData.repository,
+    });
+
     // Filtered Data
     const filteredGuidelines = guidelines?.filter(g =>
         g.title.toLowerCase().includes(guidelineSearch.toLowerCase()) ||
-        g.content.toLowerCase().includes(guidelineSearch.toLowerCase())
+        g.content.toLowerCase().includes(guidelineSearch.toLowerCase()) ||
+        g.directory?.toLowerCase().includes(guidelineSearch.toLowerCase())
     );
+
+    const directories = [...new Set(guidelines?.map(g => g.directory).filter(Boolean) || [])];
 
     const filteredSets = guidelineSets?.filter(set => {
         const matchesSearch = set.name.toLowerCase().includes(setSearch.toLowerCase()) ||
@@ -296,7 +322,17 @@ const GuidelineManagement = () => {
                                                             <Book size={20} />
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{guideline.title}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{guideline.title}</p>
+                                                                {guideline.directory && (
+                                                                    <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-tight">
+                                                                        {guideline.directory}
+                                                                    </span>
+                                                                )}
+                                                                <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 uppercase tracking-tight">
+                                                                    {guideline.repository}
+                                                                </span>
+                                                            </div>
                                                             <p className="text-[11px] text-slate-400 font-medium line-clamp-1 max-w-sm">{guideline.content}</p>
                                                         </div>
                                                     </div>
@@ -337,10 +373,22 @@ const GuidelineManagement = () => {
                                                     <Book size={24} />
                                                 </div>
                                                 <div className="space-y-0.5">
-                                                    <h4 className="text-lg font-bold text-[#1E293B] leading-tight group-hover:text-indigo-600 transition-colors">{guideline.title}</h4>
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                        {guideline.createdAt ? new Date(guideline.createdAt).toLocaleDateString().toUpperCase() : 'NO DATE'}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="text-lg font-bold text-[#1E293B] leading-tight group-hover:text-indigo-600 transition-colors">{guideline.title}</h4>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                            {guideline.createdAt ? new Date(guideline.createdAt).toLocaleDateString().toUpperCase() : 'NO DATE'}
+                                                        </span>
+                                                        {guideline.directory && (
+                                                            <>
+                                                                <span className="text-slate-300">•</span>
+                                                                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{guideline.directory}</span>
+                                                            </>
+                                                        )}
+                                                        <span className="text-slate-300">•</span>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{guideline.repository}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 group-hover:border-indigo-100 transition-all overflow-hidden h-32">
@@ -376,6 +424,52 @@ const GuidelineManagement = () => {
                             value={guidelineData.title}
                             onChange={(e) => setGuidelineData({ ...guidelineData, title: e.target.value })}
                         />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-600">Repository</label>
+                                <select
+                                    className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium appearance-none cursor-pointer"
+                                    value={guidelineData.repository}
+                                    onChange={(e) => setGuidelineData({ ...guidelineData, repository: e.target.value })}
+                                >
+                                    {guidelineRepositories?.map(repoName => (
+                                        <option key={repoName} value={repoName}>{repoName}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-600">Branch</label>
+                                <select
+                                    className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium appearance-none cursor-pointer"
+                                    value={guidelineData.branch}
+                                    onChange={(e) => setGuidelineData({ ...guidelineData, branch: e.target.value })}
+                                >
+                                    {guidelineRefs?.map(ref => (
+                                        <option key={ref.name} value={ref.name}>{ref.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-600">Directory</label>
+                            <div className="space-y-2">
+                                <input
+                                    list="existing-directories"
+                                    placeholder="Enter or select a directory (e.g. Project A/Service B)"
+                                    className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
+                                    value={guidelineData.directory}
+                                    onChange={(e) => setGuidelineData({ ...guidelineData, directory: e.target.value })}
+                                />
+                                <datalist id="existing-directories">
+                                    {directories.map(dir => (
+                                        <option key={dir} value={dir} />
+                                    ))}
+                                </datalist>
+                                <p className="text-[10px] text-slate-400 font-medium pl-1">
+                                    Use forward slashes (/) for nested structures. Leave empty for root.
+                                </p>
+                            </div>
+                        </div>
                         <Textarea
                             label="Guideline Content"
                             placeholder="Enter rules, constraints, and best practices in Markdown format..."
@@ -440,7 +534,7 @@ const GuidelineManagement = () => {
                                     onChange={(e) => setSetData({ ...setData, branch: e.target.value })}
                                 >
                                     {branchRefs?.map(ref => (
-                                        <option key={ref} value={ref}>{ref}</option>
+                                        <option key={ref.name} value={ref.name}>{ref.name}</option>
                                     ))}
                                     {!branchRefs?.length && <option value="main">main</option>}
                                 </select>
@@ -505,9 +599,21 @@ const GuidelineManagement = () => {
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="text-xl font-bold text-slate-900 leading-tight">{selectedGuideline.title}</h4>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                        EST. {selectedGuideline.createdAt ? new Date(selectedGuideline.createdAt).toLocaleDateString().toUpperCase() : 'PENDING'}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                            EST. {selectedGuideline.createdAt ? new Date(selectedGuideline.createdAt).toLocaleDateString().toUpperCase() : 'PENDING'}
+                                        </span>
+                                        {selectedGuideline.directory && (
+                                            <>
+                                                <span className="text-slate-300">•</span>
+                                                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{selectedGuideline.directory}</span>
+                                            </>
+                                        )}
+                                        <span className="text-slate-300">•</span>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedGuideline.repository}</span>
+                                        <span className="text-slate-300">•</span>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedGuideline.branch}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -651,7 +757,7 @@ const GuidelineManagement = () => {
                                     onChange={(e) => setEditSetData({ ...editSetData, branch: e.target.value })}
                                 >
                                     {editSetRefs?.map(ref => (
-                                        <option key={ref} value={ref}>{ref}</option>
+                                        <option key={ref.name} value={ref.name}>{ref.name}</option>
                                     ))}
                                     {!editSetRefs?.length && <option value="main">main</option>}
                                 </select>

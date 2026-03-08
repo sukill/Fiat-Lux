@@ -7,6 +7,9 @@ class Guideline(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     title: str
     content: str
+    directory: Optional[str] = None
+    repository: str = "guideline-repo"
+    branch: str = "main"
 
 
 class GuidelineSet(BaseModel):

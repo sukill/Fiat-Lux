@@ -1,8 +1,11 @@
 export class Guideline {
-    constructor({ id, title, content, created_at }) {
+    constructor({ id, title, content, directory, repository, branch, created_at }) {
         this.id = id;
         this.title = title;
         this.content = content;
+        this.directory = directory;
+        this.repository = repository;
+        this.branch = branch;
         this.createdAt = created_at;
     }
 }

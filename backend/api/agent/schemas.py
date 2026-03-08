@@ -14,21 +14,36 @@ from domain.agent.workflow.models import WorkflowRun as DomainWorkflowRun
 class GuidelineCreate(BaseModel):
     title: str
     content: str
+    directory: Optional[str] = None
+    repository: str = "guideline-repo"
+    branch: str = "main"
 
 
 class GuidelineUpdate(BaseModel):
     title: Optional[str] = None
-    content: Optional[str] = None
+    directory: Optional[str] = None
+    repository: Optional[str] = None
+    branch: Optional[str] = None
 
 
 class GuidelineSchema(BaseModel):
     id: UUID
     title: str
     content: str
+    directory: Optional[str] = None
+    repository: str
+    branch: str
 
     @classmethod
     def from_domain(cls, guideline: DomainGuideline) -> "GuidelineSchema":
-        return cls(id=guideline.id, title=guideline.title, content=guideline.content)
+        return cls(
+            id=guideline.id,
+            title=guideline.title,
+            content=guideline.content,
+            directory=guideline.directory,
+            repository=guideline.repository,
+            branch=guideline.branch,
+        )
 
 
 class GuidelineSetCreate(BaseModel):

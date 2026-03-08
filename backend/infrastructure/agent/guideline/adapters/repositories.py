@@ -15,7 +15,13 @@ def _sanitize_filename(name: str) -> str:
     return re.sub(r'[^\w\-_\.]', '_', name)
 
 
-def _parse_guideline_content(content: str, filename: str) -> Optional[Guideline]:
+def _parse_guideline_content(
+    content: str, 
+    filename: str, 
+    directory: Optional[str] = None,
+    repository: str = "guideline-repo",
+    branch: str = "main"
+) -> Optional[Guideline]:
     """Parse content from either JSON or Markdown with frontmatter."""
     if filename.endswith(".json"):
         try:
@@ -46,7 +52,10 @@ def _parse_guideline_content(content: str, filename: str) -> Optional[Guideline]
                     return Guideline(
                         id=UUID(g_id),
                         title=metadata.get("title", filename[:-3]),
-                        content=body.strip()
+                        content=body.strip(),
+                        directory=directory,
+                        repository=repository,
+                        branch=branch
                     )
             except Exception:
                 pass
@@ -56,7 +65,10 @@ def _parse_guideline_content(content: str, filename: str) -> Optional[Guideline]
         # This is expected for manually added MD files, but we should minimize this.
         return Guideline(
             title=filename[:-3],
-            content=content.strip()
+            content=content.strip(),
+            directory=directory,
+            repository=repository,
+            branch=branch
         )
     return None
 
@@ -64,41 +76,34 @@ def _parse_guideline_content(content: str, filename: str) -> Optional[Guideline]
 class DocuHubGuidelineRepository(GuidelineRepository):
     def __init__(self, client: DocuHubClient):
         self.client = client
-        self.repo_name = "guideline-repo"
         self.base_path = "guidelines"
 
     async def save(self, guideline: Guideline) -> None:
         new_filename = _sanitize_filename(guideline.title) or str(guideline.id)
-        new_path = f"{self.base_path}/{new_filename}.md"
+        dir_path = f"{self.base_path}/{guideline.directory}" if guideline.directory else self.base_path
+        new_path = f"{dir_path}/{new_filename}.md"
         
         # 1. Find and delete existing files for this ID (to handle renames or format changes)
-        old_entries = []
+        old_paths = []
         try:
-            entries = await self.client.list_files(self.base_path, repo_name=self.repo_name)
-            for entry in entries:
-                if not entry["is_dir"] and (entry["name"].endswith(".json") or entry["name"].endswith(".md")):
-                    try:
-                        full_path = f"{self.base_path}/{entry['name']}"
-                        content = await self.client.read_file(full_path, repo_name=self.repo_name)
-                        if content:
-                            g = _parse_guideline_content(content, entry["name"])
-                            if g and g.id == guideline.id:
-                                old_entries.append(entry["name"])
-                    except Exception:
-                        # Skip files that can't be read or parsed
-                        continue
+            all_guidelines = await self.list_all()
+            for g in all_guidelines:
+                if g.id == guideline.id:
+                    # Construct full path for deletion
+                    g_dir = f"{self.base_path}/{g.directory}" if g.directory else self.base_path
+                    g_filename = _sanitize_filename(g.title) or str(g.id)
+                    old_paths.append(f"{g_dir}/{g_filename}.md")
         except Exception:
-            # If list_files fails (e.g. dir doesn't exist), just proceed with creation
             pass
 
         # 2. Prepare changes
         changes = []
         
         # Delete old files if they have different names or are in JSON format
-        for old_name in old_entries:
-            if old_name != f"{new_filename}.md":
+        for old_path in old_paths:
+            if old_path != new_path:
                 changes.append({
-                    "path": f"{self.base_path}/{old_name}",
+                    "path": old_path,
                     "content": "",  # DocuHub may require content field even for DELETE
                     "action": "DELETE"
                 })
@@ -123,7 +128,8 @@ class DocuHubGuidelineRepository(GuidelineRepository):
             await self.client.commit(
                 changes=changes,
                 message=f"Update guideline: {guideline.title}",
-                repo_name=self.repo_name
+                repo_name=guideline.repository,
+                target_ref=guideline.branch
             )
         except Exception as e:
             # Log the error if possible, but for now we'll just raise it to be caught by FastAPI
@@ -131,19 +137,10 @@ class DocuHubGuidelineRepository(GuidelineRepository):
             raise
 
     async def find_by_id(self, guideline_id: UUID) -> Optional[Guideline]:
-        # Implementation: scan files to find matching ID
-        try:
-            entries = await self.client.list_files(self.base_path, repo_name=self.repo_name)
-            for entry in entries:
-                if not entry["is_dir"] and (entry["name"].endswith(".json") or entry["name"].endswith(".md")):
-                    content = await self.client.read_file(f"{self.base_path}/{entry['name']}", repo_name=self.repo_name)
-                    if content:
-                        g = _parse_guideline_content(content, entry["name"])
-                        if g and g.id == guideline_id:
-                            return g
-        except Exception:
-            pass
-
+        all_guidelines = await self.list_all()
+        for g in all_guidelines:
+            if g.id == guideline_id:
+                return g
         return None
 
     async def find_by_intent(self, intent: str) -> List[Guideline]:
@@ -161,23 +158,56 @@ class DocuHubGuidelineRepository(GuidelineRepository):
                 return g
         return None
 
+    async def list_guideline_repos(self) -> List[str]:
+        """가이드라인 폴더가 포함된 저장소 목록을 반환합니다."""
+        all_repos = await self.client.list_repos()
+        guideline_repos = []
+        for repo in all_repos:
+            try:
+                # Root directory check for 'guidelines/' folder
+                entries = await self.client.list_files("", repo_name=repo)
+                if any(e["is_dir"] and e["name"] == self.base_path for e in entries):
+                    guideline_repos.append(repo)
+            except Exception:
+                continue
+        return guideline_repos
+
     async def list_all(self) -> List[Guideline]:
-        try:
-            entries = await self.client.list_files(self.base_path, repo_name=self.repo_name)
-        except Exception:
-            return []
-            
         guidelines = []
-        for entry in entries:
-            if not entry["is_dir"] and (entry["name"].endswith(".json") or entry["name"].endswith(".md")):
-                try:
-                    content = await self.client.read_file(f"{self.base_path}/{entry['name']}", repo_name=self.repo_name)
-                    if content:
-                        g = _parse_guideline_content(content, entry["name"])
-                        if g:
-                            guidelines.append(g)
-                except Exception:
-                    continue
+        repos = await self.list_guideline_repos()
+
+        async def _recursive_list(current_path: str, repo_name: str, branch: str, relative_dir: Optional[str] = None):
+            try:
+                entries = await self.client.list_files(current_path, repo_name=repo_name, ref=branch)
+            except Exception:
+                return
+
+            for entry in entries:
+                full_path = f"{current_path}/{entry['name']}"
+                if entry["is_dir"]:
+                    next_rel_dir = f"{relative_dir}/{entry['name']}" if relative_dir else entry["name"]
+                    await _recursive_list(full_path, repo_name, branch, next_rel_dir)
+                elif entry["name"].endswith(".json") or entry["name"].endswith(".md"):
+                    try:
+                        content = await self.client.read_file(full_path, repo_name=repo_name, ref=branch)
+                        if content:
+                            g = _parse_guideline_content(
+                                content, 
+                                entry["name"], 
+                                directory=relative_dir,
+                                repository=repo_name,
+                                branch=branch
+                            )
+                            if g:
+                                guidelines.append(g)
+                    except Exception:
+                        continue
+
+        for repo_name in repos:
+            # For now, we assume 'main' branch for all scanned repos. 
+            # In a more advanced version, we could scan all branches.
+            await _recursive_list(self.base_path, repo_name, "main")
+            
         return guidelines
 
 

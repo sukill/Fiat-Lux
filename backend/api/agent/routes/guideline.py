@@ -15,11 +15,22 @@ from domain.agent.guideline.use_cases import GuidelineService
 router = APIRouter(prefix="/guidelines", tags=["Guideline"])
 
 
+@router.get("/repositories", response_model=List[str])
+async def list_guideline_repositories(service: GuidelineService = Depends(get_guideline_service)):
+    return await service.repo.list_guideline_repos()
+
+
 @router.post("/", response_model=GuidelineSchema)
 async def create_guideline(
     request: GuidelineCreate, service: GuidelineService = Depends(get_guideline_service)
 ):
-    guideline = await service.create_guideline(title=request.title, content=request.content)
+    guideline = await service.create_guideline(
+        title=request.title, 
+        content=request.content, 
+        directory=request.directory,
+        repository=request.repository,
+        branch=request.branch
+    )
     return GuidelineSchema.from_domain(guideline)
 
 
@@ -36,7 +47,12 @@ async def update_guideline(
     service: GuidelineService = Depends(get_guideline_service),
 ):
     guideline = await service.update_guideline(
-        guideline_id=guideline_id, title=request.title, content=request.content
+        guideline_id=guideline_id,
+        title=request.title,
+        content=request.content,
+        directory=request.directory,
+        repository=request.repository,
+        branch=request.branch,
     )
     if not guideline:
         raise HTTPException(status_code=404, detail="Guideline not found")

@@ -28,6 +28,11 @@ class GuidelineRepository(ABC):
         """모든 가이드라인 목록을 반환합니다."""
         pass
 
+    @abstractmethod
+    async def list_guideline_repos(self) -> List[str]:
+        """가이드라인 폴더가 포함된 저장소 목록을 반환합니다."""
+        pass
+
 
 class GuidelineSetRepository(ABC):
     @abstractmethod

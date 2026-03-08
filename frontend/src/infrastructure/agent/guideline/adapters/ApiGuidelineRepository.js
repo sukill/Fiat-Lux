@@ -14,6 +14,12 @@ export class ApiGuidelineRepository extends GuidelineRepository {
         return data.map(item => new Guideline(item));
     }
 
+    async listGuidelineRepositories() {
+        const response = await fetch(`${this.baseUrl}/guidelines/repositories`);
+        if (!response.ok) throw new Error('Failed to fetch guideline repositories');
+        return await response.json();
+    }
+
     async createGuideline(data) {
         const response = await fetch(`${this.baseUrl}/guidelines/`, {
             method: 'POST',
