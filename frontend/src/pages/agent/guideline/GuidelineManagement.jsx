@@ -19,6 +19,8 @@ const GuidelineManagement = () => {
     const [selectedSet, setSelectedSet] = useState(null);
     const [editingSet, setEditingSet] = useState(null);
     const [isEditSetModalOpen, setIsEditSetModalOpen] = useState(false);
+    const [isEditGuidelineModalOpen, setIsEditGuidelineModalOpen] = useState(false);
+    const [editingGuideline, setEditingGuideline] = useState(null);
 
     // Form States
     const [guidelineData, setGuidelineData] = useState({
@@ -42,6 +44,13 @@ const GuidelineManagement = () => {
         branch: 'main',
         guideline_ids: []
     });
+    const [editGuidelineData, setEditGuidelineData] = useState({
+        title: '',
+        content: '',
+        directory: '',
+        repository: 'guideline-repo',
+        branch: 'main'
+    });
 
     // Search & View States
     const [guidelineSearch, setGuidelineSearch] = useState('');
@@ -60,6 +69,18 @@ const GuidelineManagement = () => {
             });
         }
     }, [editingSet]);
+
+    React.useEffect(() => {
+        if (editingGuideline) {
+            setEditGuidelineData({
+                title: editingGuideline.title || '',
+                content: editingGuideline.content || '',
+                directory: editingGuideline.directory || '',
+                repository: editingGuideline.repository || 'guideline-repo',
+                branch: editingGuideline.branch || 'main'
+            });
+        }
+    }, [editingGuideline]);
 
     // Queries
     const { data: guidelines, isLoading: loadingGuidelines } = useQuery({
@@ -134,10 +155,25 @@ const GuidelineManagement = () => {
         }
     });
 
+    const updateGuidelineMutation = useMutation({
+        mutationFn: ({ id, data }) => guidelineRepo.updateGuideline(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['guidelines'] });
+            setEditingGuideline(null);
+            setIsEditGuidelineModalOpen(false);
+        }
+    });
+
     const { data: guidelineRefs } = useQuery({
         queryKey: ['storage-refs', guidelineData.repository],
         queryFn: () => storageRepo.listRefs(guidelineData.repository),
         enabled: !!guidelineData.repository,
+    });
+
+    const { data: editGuidelineRefs } = useQuery({
+        queryKey: ['storage-refs', editGuidelineData.repository],
+        queryFn: () => storageRepo.listRefs(editGuidelineData.repository),
+        enabled: !!editGuidelineData.repository,
     });
 
     // Filtered Data
@@ -147,7 +183,20 @@ const GuidelineManagement = () => {
         g.directory?.toLowerCase().includes(guidelineSearch.toLowerCase())
     );
 
-    const directories = [...new Set(guidelines?.map(g => g.directory).filter(Boolean) || [])];
+    const directories = React.useMemo(() => {
+        if (!guidelines) return [];
+        const allPaths = new Set();
+        guidelines.forEach(g => {
+            if (!g.directory) return;
+            const parts = g.directory.split('/');
+            let current = '';
+            parts.forEach((part, index) => {
+                current = index === 0 ? part : `${current}/${part}`;
+                allPaths.add(current);
+            });
+        });
+        return [...allPaths].sort();
+    }, [guidelines]);
 
     const filteredSets = guidelineSets?.filter(set => {
         const matchesSearch = set.name.toLowerCase().includes(setSearch.toLowerCase()) ||
@@ -324,13 +373,11 @@ const GuidelineManagement = () => {
                                                         <div>
                                                             <div className="flex items-center gap-2">
                                                                 <p className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">{guideline.title}</p>
-                                                                {guideline.directory && (
-                                                                    <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-tight">
-                                                                        {guideline.directory}
-                                                                    </span>
-                                                                )}
                                                                 <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 uppercase tracking-tight">
                                                                     {guideline.repository}
+                                                                </span>
+                                                                <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-tight">
+                                                                    {guideline.directory || '/'}
                                                                 </span>
                                                             </div>
                                                             <p className="text-[11px] text-slate-400 font-medium line-clamp-1 max-w-sm">{guideline.content}</p>
@@ -380,14 +427,10 @@ const GuidelineManagement = () => {
                                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                                             {guideline.createdAt ? new Date(guideline.createdAt).toLocaleDateString().toUpperCase() : 'NO DATE'}
                                                         </span>
-                                                        {guideline.directory && (
-                                                            <>
-                                                                <span className="text-slate-300">•</span>
-                                                                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{guideline.directory}</span>
-                                                            </>
-                                                        )}
                                                         <span className="text-slate-300">•</span>
                                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{guideline.repository}</span>
+                                                        <span className="text-slate-300">•</span>
+                                                        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{guideline.directory || '/'}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -450,26 +493,11 @@ const GuidelineManagement = () => {
                                 </select>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-600">Directory</label>
-                            <div className="space-y-2">
-                                <input
-                                    list="existing-directories"
-                                    placeholder="Enter or select a directory (e.g. Project A/Service B)"
-                                    className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
-                                    value={guidelineData.directory}
-                                    onChange={(e) => setGuidelineData({ ...guidelineData, directory: e.target.value })}
-                                />
-                                <datalist id="existing-directories">
-                                    {directories.map(dir => (
-                                        <option key={dir} value={dir} />
-                                    ))}
-                                </datalist>
-                                <p className="text-[10px] text-slate-400 font-medium pl-1">
-                                    Use forward slashes (/) for nested structures. Leave empty for root.
-                                </p>
-                            </div>
-                        </div>
+                        <DirectorySelector
+                            value={guidelineData.directory}
+                            onChange={(dir) => setGuidelineData({ ...guidelineData, directory: dir })}
+                            directories={directories}
+                        />
                         <Textarea
                             label="Guideline Content"
                             placeholder="Enter rules, constraints, and best practices in Markdown format..."
@@ -603,14 +631,10 @@ const GuidelineManagement = () => {
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                             EST. {selectedGuideline.createdAt ? new Date(selectedGuideline.createdAt).toLocaleDateString().toUpperCase() : 'PENDING'}
                                         </span>
-                                        {selectedGuideline.directory && (
-                                            <>
-                                                <span className="text-slate-300">•</span>
-                                                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{selectedGuideline.directory}</span>
-                                            </>
-                                        )}
                                         <span className="text-slate-300">•</span>
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedGuideline.repository}</span>
+                                        <span className="text-slate-300">•</span>
+                                        <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{selectedGuideline.directory || '/'}</span>
                                         <span className="text-slate-300">•</span>
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedGuideline.branch}</span>
                                     </div>
@@ -630,8 +654,18 @@ const GuidelineManagement = () => {
                             </div>
                         </div>
 
-                        <div className="flex justify-end pt-4">
+                        <div className="flex justify-end pt-4 gap-3">
                             <Button variant="outline" onClick={() => setSelectedGuideline(null)}>Close</Button>
+                            <Button
+                                variant="secondary"
+                                onClick={() => {
+                                    setEditingGuideline(selectedGuideline);
+                                    setIsEditGuidelineModalOpen(true);
+                                    setSelectedGuideline(null);
+                                }}
+                            >
+                                Edit Module
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -810,6 +844,136 @@ const GuidelineManagement = () => {
                     </div>
                 </div>
             </Modal>
+            {/* Edit Guideline Modal */}
+            <Modal
+                isOpen={isEditGuidelineModalOpen}
+                onClose={() => {
+                    setIsEditGuidelineModalOpen(false);
+                    setEditingGuideline(null);
+                }}
+                title="Edit Guideline Module"
+            >
+                <div className="space-y-6">
+                    <div className="space-y-6">
+                        <Input
+                            label="Module Title"
+                            placeholder="e.g. Formatting & Technical Standards"
+                            value={editGuidelineData.title}
+                            onChange={(e) => setEditGuidelineData({ ...editGuidelineData, title: e.target.value })}
+                        />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-600">Repository</label>
+                                <select
+                                    className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium appearance-none cursor-pointer"
+                                    value={editGuidelineData.repository}
+                                    onChange={(e) => setEditGuidelineData({ ...editGuidelineData, repository: e.target.value })}
+                                >
+                                    {guidelineRepositories?.map(repoName => (
+                                        <option key={repoName} value={repoName}>{repoName}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-600">Branch</label>
+                                <select
+                                    className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium appearance-none cursor-pointer"
+                                    value={editGuidelineData.branch}
+                                    onChange={(e) => setEditGuidelineData({ ...editGuidelineData, branch: e.target.value })}
+                                >
+                                    {editGuidelineRefs?.map(ref => (
+                                        <option key={ref.name} value={ref.name}>{ref.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <DirectorySelector
+                            value={editGuidelineData.directory}
+                            onChange={(dir) => setEditGuidelineData({ ...editGuidelineData, directory: dir })}
+                            directories={directories}
+                        />
+
+                        <Textarea
+                            label="Guideline Content"
+                            placeholder="Enter rules, constraints, and best practices..."
+                            value={editGuidelineData.content}
+                            onChange={(e) => setEditGuidelineData({ ...editGuidelineData, content: e.target.value })}
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-6 border-t border-slate-50">
+                        <Button variant="outline" className="px-6" onClick={() => {
+                            setIsEditGuidelineModalOpen(false);
+                            setEditingGuideline(null);
+                        }}>Cancel</Button>
+                        <Button
+                            variant="primary"
+                            className="px-8"
+                            loading={updateGuidelineMutation.isPending}
+                            onClick={() => updateGuidelineMutation.mutate({
+                                id: editingGuideline.id,
+                                data: editGuidelineData
+                            })}
+                        >
+                            Update Module
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        </div>
+    );
+};
+
+// Sub-component for Folder/Directory Selection
+const DirectorySelector = ({ value, onChange, directories, label = "Directory" }) => {
+    const [isCreating, setIsCreating] = useState(false);
+    const [newDir, setNewDir] = useState('');
+
+    return (
+        <div className="space-y-2">
+            <div className="flex justify-between items-center">
+                <label className="text-sm font-bold text-slate-600">{label}</label>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setIsCreating(!isCreating);
+                        if (!isCreating) setNewDir('');
+                    }}
+                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider"
+                >
+                    {isCreating ? 'Choose Existing' : '+ New Directory'}
+                </button>
+            </div>
+
+            {isCreating ? (
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="e.g. Project A/Sub Folder"
+                        className="w-full bg-white border border-indigo-200 rounded-2xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
+                        value={newDir}
+                        onChange={(e) => {
+                            setNewDir(e.target.value);
+                            onChange(e.target.value);
+                        }}
+                        autoFocus
+                    />
+                    <p className="mt-1 text-[10px] text-slate-400 font-medium pl-1">
+                        Use forward slashes (/) for nested structures.
+                    </p>
+                </div>
+            ) : (
+                <select
+                    className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium appearance-none cursor-pointer"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                >
+                    <option value="">Root (guidelines/)</option>
+                    {directories.map(dir => (
+                        <option key={dir} value={dir}>{dir}</option>
+                    ))}
+                </select>
+            )}
         </div>
     );
 };
