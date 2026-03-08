@@ -3,8 +3,10 @@ from typing import List
 from uuid import UUID
 from api.agent.schemas import (
     GuidelineCreate,
+    GuidelineUpdate,
     GuidelineSchema,
     GuidelineSetCreate,
+    GuidelineSetUpdate,
     GuidelineSetSchema,
 )
 from api.agent.dependencies import get_guideline_service
@@ -27,6 +29,20 @@ async def list_guidelines(service: GuidelineService = Depends(get_guideline_serv
     return [GuidelineSchema.from_domain(g) for g in guidelines]
 
 
+@router.put("/{guideline_id}", response_model=GuidelineSchema)
+async def update_guideline(
+    guideline_id: UUID,
+    request: GuidelineUpdate,
+    service: GuidelineService = Depends(get_guideline_service),
+):
+    guideline = await service.update_guideline(
+        guideline_id=guideline_id, title=request.title, content=request.content
+    )
+    if not guideline:
+        raise HTTPException(status_code=404, detail="Guideline not found")
+    return GuidelineSchema.from_domain(guideline)
+
+
 @router.post("/sets", response_model=GuidelineSetSchema)
 async def create_guideline_set(
     request: GuidelineSetCreate,
@@ -35,6 +51,8 @@ async def create_guideline_set(
     guideline_set = await service.create_guideline_set(
         name=request.name,
         description=request.description,
+        repository=request.repository,
+        branch=request.branch,
         guideline_ids=request.guideline_ids,
     )
     return GuidelineSetSchema.from_domain(guideline_set)
@@ -53,6 +71,25 @@ async def get_guideline_set(
     set_id: UUID, service: GuidelineService = Depends(get_guideline_service)
 ):
     guideline_set = await service.get_guideline_set(set_id)
+    if not guideline_set:
+        raise HTTPException(status_code=404, detail="Guideline set not found")
+    return GuidelineSetSchema.from_domain(guideline_set)
+
+
+@router.put("/sets/{set_id}", response_model=GuidelineSetSchema)
+async def update_guideline_set(
+    set_id: UUID,
+    request: GuidelineSetUpdate,
+    service: GuidelineService = Depends(get_guideline_service),
+):
+    guideline_set = await service.update_guideline_set(
+        set_id=set_id,
+        name=request.name,
+        description=request.description,
+        repository=request.repository,
+        branch=request.branch,
+        guideline_ids=request.guideline_ids,
+    )
     if not guideline_set:
         raise HTTPException(status_code=404, detail="Guideline set not found")
     return GuidelineSetSchema.from_domain(guideline_set)

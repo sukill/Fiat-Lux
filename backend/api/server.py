@@ -1,7 +1,7 @@
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.agent.routes import workflow, persona, guideline
+from api.agent.routes import workflow, persona, guideline, storage
 from dotenv import load_dotenv
 
 # Load .env file (looked up from backend/ as root or current file location)
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(workflow.router)
 app.include_router(persona.router)
 app.include_router(guideline.router)
+app.include_router(storage.router)
 
 
 @app.get("/")

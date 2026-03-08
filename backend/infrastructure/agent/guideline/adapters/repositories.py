@@ -119,15 +119,71 @@ class InMemoryGuidelineRepository(GuidelineRepository):
         return list(self._guidelines.values())
 
 
-class InMemoryGuidelineSetRepository(GuidelineSetRepository):
-    def __init__(self):
-        self._sets: Dict[UUID, GuidelineSet] = {}
+from sqlalchemy.orm import Session
+from infrastructure.agent.guideline.persistence_models import GuidelineSetORM
+
+class MySQLGuidelineSetRepository(GuidelineSetRepository):
+    def __init__(self, session: Session, guideline_repo: Optional[GuidelineRepository] = None):
+        self.session = session
+        self.guideline_repo = guideline_repo
 
     async def save(self, guideline_set: GuidelineSet) -> None:
-        self._sets[guideline_set.id] = guideline_set
+        orm_set = (
+            self.session.query(GuidelineSetORM).filter_by(id=str(guideline_set.id)).first()
+        )
+
+        guideline_ids = [str(g.id) for g in guideline_set.guidelines]
+
+        if not orm_set:
+            orm_set = GuidelineSetORM(
+                id=str(guideline_set.id),
+                name=guideline_set.name,
+                description=guideline_set.description,
+                repository=guideline_set.repository,
+                branch=guideline_set.branch,
+                guideline_ids=guideline_ids,
+            )
+            self.session.add(orm_set)
+        else:
+            orm_set.name = guideline_set.name
+            orm_set.description = guideline_set.description
+            orm_set.repository = guideline_set.repository
+            orm_set.branch = guideline_set.branch
+            orm_set.guideline_ids = guideline_ids
+        
+        self.session.commit()
 
     async def find_by_id(self, set_id: UUID) -> Optional[GuidelineSet]:
-        return self._sets.get(set_id)
+        orm_set = self.session.query(GuidelineSetORM).filter_by(id=str(set_id)).first()
+        if not orm_set:
+            return None
+
+        # Resolve guidelines from DocuHub using the IDs list
+        guidelines = []
+        for g_id_str in orm_set.guideline_ids:
+            g_id = UUID(g_id_str)
+            if self.guideline_repo:
+                # Note: DocuHubGuidelineRepository currently uses self.repo_name="guideline-repo".
+                # We might need to pass the repository/branch from orm_set to the fetcher, 
+                # but let's stick to the current port signature for now.
+                g = await self.guideline_repo.find_by_id(g_id)
+                if g:
+                    guidelines.append(g)
+
+        return GuidelineSet(
+            id=UUID(orm_set.id),
+            name=orm_set.name,
+            description=orm_set.description,
+            repository=orm_set.repository,
+            branch=orm_set.branch,
+            guidelines=guidelines
+        )
 
     async def list_all(self) -> List[GuidelineSet]:
-        return list(self._sets.values())
+        orm_sets = self.session.query(GuidelineSetORM).all()
+        result = []
+        for s in orm_sets:
+            guideline_set = await self.find_by_id(UUID(s.id))
+            if guideline_set:
+                result.append(guideline_set)
+        return result

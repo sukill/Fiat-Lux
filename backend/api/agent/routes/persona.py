@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 from api.agent.schemas import (
     PersonaCreate,
@@ -22,6 +22,9 @@ async def create_persona_set(
     persona_set = await service.create_persona_set(
         name=request.name,
         description=request.description,
+        owner=request.owner,
+        repository=request.repository,
+        branch=request.branch,
         persona_ids=request.persona_ids,
     )
     return PersonaSetSchema.from_domain(persona_set)
@@ -53,6 +56,9 @@ async def update_persona_set(
         set_id=set_id,
         name=request.name,
         description=request.description,
+        owner=request.owner,
+        repository=request.repository,
+        branch=request.branch,
         persona_ids=request.persona_ids,
     )
     if not persona_set:
@@ -72,21 +78,27 @@ async def create_persona(
         goals=request.goals,
         constraints=request.constraints,
         guidelines=request.guidelines,
+        namespace=request.namespace,
     )
     return PersonaSchema.from_domain(persona)
 
 
 @router.get("/", response_model=List[PersonaSchema])
-async def list_personas(service: PersonaService = Depends(get_persona_service)):
-    personas = await service.list_personas()
+async def list_personas(
+    namespace: Optional[str] = None,
+    service: PersonaService = Depends(get_persona_service)
+):
+    personas = await service.list_personas(namespace=namespace)
     return [PersonaSchema.from_domain(p) for p in personas]
 
 
 @router.get("/{persona_id}", response_model=PersonaSchema)
 async def get_persona(
-    persona_id: UUID, service: PersonaService = Depends(get_persona_service)
+    persona_id: UUID,
+    namespace: Optional[str] = None,
+    service: PersonaService = Depends(get_persona_service)
 ):
-    persona = await service.get_persona(persona_id)
+    persona = await service.get_persona(persona_id, namespace=namespace)
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found")
     return PersonaSchema.from_domain(persona)
@@ -111,3 +123,16 @@ async def update_persona(
     if not persona:
         raise HTTPException(status_code=404, detail="Persona not found")
     return PersonaSchema.from_domain(persona)
+
+
+@router.delete("/{persona_id}")
+async def delete_persona(
+    persona_id: UUID,
+    namespace: Optional[str] = None,
+    service: PersonaService = Depends(get_persona_service)
+):
+    """지정된 페르소나를 삭제합니다."""
+    success = await service.delete_persona(persona_id, namespace=namespace)
+    if not success:
+        raise HTTPException(status_code=404, detail="Persona not found")
+    return {"status": "success"}

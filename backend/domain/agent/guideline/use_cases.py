@@ -24,7 +24,12 @@ class GuidelineService:
         return await self.repo.list_all()
 
     async def create_guideline_set(
-        self, name: str, description: str = None, guideline_ids: List[UUID] = None
+        self, 
+        name: str, 
+        description: str = None, 
+        repository: str = "guideline-repo",
+        branch: str = "main",
+        guideline_ids: List[UUID] = None
     ) -> GuidelineSet:
         guidelines = []
         if guideline_ids:
@@ -34,7 +39,11 @@ class GuidelineService:
                     guidelines.append(g)
 
         guideline_set = GuidelineSet(
-            name=name, description=description, guidelines=guidelines
+            name=name, 
+            description=description, 
+            repository=repository,
+            branch=branch,
+            guidelines=guidelines
         )
         await self.set_repo.save(guideline_set)
         return guideline_set
@@ -44,3 +53,54 @@ class GuidelineService:
 
     async def list_guideline_sets(self) -> List[GuidelineSet]:
         return await self.set_repo.list_all()
+
+    async def update_guideline(
+        self,
+        guideline_id: UUID,
+        title: str = None,
+        content: str = None
+    ) -> Optional[Guideline]:
+        guideline = await self.repo.find_by_id(guideline_id)
+        if not guideline:
+            return None
+        
+        if title is not None:
+            guideline.title = title
+        if content is not None:
+            guideline.content = content
+            
+        await self.repo.save(guideline)
+        return guideline
+
+    async def update_guideline_set(
+        self,
+        set_id: UUID,
+        name: str = None,
+        description: str = None,
+        repository: str = None,
+        branch: str = None,
+        guideline_ids: List[UUID] = None
+    ) -> Optional[GuidelineSet]:
+        guideline_set = await self.set_repo.find_by_id(set_id)
+        if not guideline_set:
+            return None
+        
+        if name is not None:
+            guideline_set.name = name
+        if description is not None:
+            guideline_set.description = description
+        if repository is not None:
+            guideline_set.repository = repository
+        if branch is not None:
+            guideline_set.branch = branch
+            
+        if guideline_ids is not None:
+            guidelines = []
+            for g_id in guideline_ids:
+                g = await self.repo.find_by_id(g_id)
+                if g:
+                    guidelines.append(g)
+            guideline_set.guidelines = guidelines
+            
+        await self.set_repo.save(guideline_set)
+        return guideline_set

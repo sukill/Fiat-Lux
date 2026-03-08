@@ -16,6 +16,11 @@ class GuidelineCreate(BaseModel):
     content: str
 
 
+class GuidelineUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+
+
 class GuidelineSchema(BaseModel):
     id: UUID
     title: str
@@ -29,13 +34,25 @@ class GuidelineSchema(BaseModel):
 class GuidelineSetCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    repository: Optional[str] = Field("guideline-repo", description="DocuHub repository name")
+    branch: Optional[str] = Field("main", description="DocuHub branch name")
     guideline_ids: List[UUID] = Field(default_factory=list)
+
+
+class GuidelineSetUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    repository: Optional[str] = None
+    branch: Optional[str] = None
+    guideline_ids: Optional[List[UUID]] = None
 
 
 class GuidelineSetSchema(BaseModel):
     id: UUID
     name: str
     description: Optional[str] = None
+    repository: str
+    branch: str
     guidelines: List[GuidelineSchema]
 
     @classmethod
@@ -44,6 +61,8 @@ class GuidelineSetSchema(BaseModel):
             id=guideline_set.id,
             name=guideline_set.name,
             description=guideline_set.description,
+            repository=guideline_set.repository,
+            branch=guideline_set.branch,
             guidelines=[
                 GuidelineSchema.from_domain(g) for g in guideline_set.guidelines
             ],
@@ -59,6 +78,7 @@ class PersonaCreate(BaseModel):
     motivation: Optional[str] = None
     constraints: List[str] = Field(default_factory=list)
     guidelines: List[str] = Field(default_factory=list)
+    namespace: Optional[str] = Field("fiat-lux-system", description="DocuHub namespace")
 
 
 class PersonaUpdate(BaseModel):
@@ -80,7 +100,8 @@ class PersonaSchema(BaseModel):
     motivation: Optional[str]
     constraints: List[str]
     guidelines: List[str]
-    created_at: datetime
+    namespace: str
+    created_at: Optional[datetime]
 
     @classmethod
     def from_domain(cls, persona: AgentPersona) -> "PersonaSchema":
@@ -93,19 +114,26 @@ class PersonaSchema(BaseModel):
             motivation=persona.motivation,
             constraints=persona.constraints,
             guidelines=persona.guidelines,
+            namespace=persona.namespace,
             created_at=persona.created_at or datetime.now(),
         )
 
 
 class PersonaSetCreate(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: Optional[str] = Field(None, description="Detailed description of the persona set")
+    owner: Optional[str] = Field(None, description="DocuHub namespace/owner")
+    repository: Optional[str] = Field(None, description="DocuHub repository name")
+    branch: Optional[str] = Field(None, description="DocuHub branch name")
     persona_ids: List[UUID] = Field(default_factory=list)
 
 
 class PersonaSetUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    owner: Optional[str] = None
+    repository: Optional[str] = None
+    branch: Optional[str] = None
     persona_ids: Optional[List[UUID]] = None
 
 
@@ -113,6 +141,9 @@ class PersonaSetSchema(BaseModel):
     id: UUID
     name: str
     description: Optional[str] = None
+    owner: str
+    repository: str
+    branch: str
     personas: List[PersonaSchema]
     created_at: datetime
 
@@ -122,6 +153,9 @@ class PersonaSetSchema(BaseModel):
             id=persona_set.id,
             name=persona_set.name,
             description=persona_set.description,
+            owner=persona_set.owner,
+            repository=persona_set.repository,
+            branch=persona_set.branch,
             personas=[PersonaSchema.from_domain(p) for p in persona_set.personas],
             created_at=persona_set.created_at or datetime.now(),
         )
@@ -184,3 +218,20 @@ class WorkflowRunSchema(BaseModel):
 
 class WorkflowResponse(BaseModel):
     run: WorkflowRunSchema
+
+
+# --- Storage Schemas ---
+class RepositorySchema(BaseModel):
+    name: str
+
+class FileEntrySchema(BaseModel):
+    name: str
+    is_dir: bool
+    size: int
+    commit_hash: Optional[str] = None
+
+class FileContentSchema(BaseModel):
+    path: str
+    content: str
+    repo_name: str
+    ref: str

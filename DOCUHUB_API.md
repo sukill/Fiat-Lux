@@ -177,3 +177,21 @@ DocuHub은 분산 Git 기반의 가이드라인 저장소 시스템입니다. �
     ]
   }
   ```
+
+### 3-3. 파일 내용 조회 (Read File)
+특정 리비전 및 경로의 파일 내용을 조회합니다.
+
+- **URL**: `/repo/file`
+- **Method**: `GET`
+- **Query Parameters**:
+  - `user_id` (string, required)
+  - `repo_name` (string, required)
+  - `ref` (string, optional): 브랜치나 태그 (기본값: main)
+  - `path` (string, required): 조회할 파일 경로
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "content": "파일 내용 문자열..."
+  }
+  ```

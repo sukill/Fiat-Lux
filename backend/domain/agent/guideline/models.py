@@ -13,6 +13,8 @@ class GuidelineSet(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     name: str
     description: Optional[str] = None
+    repository: str = "guideline-repo"
+    branch: str = "main"
     guidelines: List[Guideline] = Field(default_factory=list)
 
     def add_guideline(self, guideline: Guideline):

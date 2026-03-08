@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from api.agent.dependencies import get_storage_service
 from domain.agent.storage.ports.inputs import StorageUseCase
 from api.agent.schemas import RepositorySchema, FileEntrySchema, FileContentSchema
+import os, httpx
 
 router = APIRouter(prefix="/storage", tags=["storage"])
 
@@ -48,3 +49,23 @@ async def read_file(
         repo_name=content.repo_name,
         ref=content.ref
     )
+
+@router.get("/refs")
+async def list_refs(
+    repo_name: str = Query(..., description="저장소 이름"),
+    namespace: str = Query("fiat-lux-system", description="네임스페이스"),
+):
+    """저장소의 브랜치/태그 목록을 조회합니다."""
+    docuhub_url = os.getenv("DOCUHUB_BASE_URL", "http://localhost:8001")
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{docuhub_url}/repo/refs",
+                params={"namespace": namespace, "repo_name": repo_name},
+                timeout=5.0,
+            )
+            if resp.status_code == 200:
+                return resp.json()
+            return {"refs": []}
+    except Exception:
+        return {"refs": []}

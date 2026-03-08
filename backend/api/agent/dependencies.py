@@ -17,8 +17,7 @@ from infrastructure.agent.persona.adapters.repositories import (
 )
 from infrastructure.agent.guideline.adapters.repositories import (
     DocuHubGuidelineRepository,
-    InMemoryGuidelineRepository,
-    InMemoryGuidelineSetRepository,
+    MySQLGuidelineSetRepository,
 )
 from infrastructure.agent.common.adapters.docuhub_client import DocuHubClient
 from infrastructure.agent.persona.adapters.selectors import IntelligencePersonaSelector
@@ -68,8 +67,6 @@ def create_inferrer():
 _docuhub_client = DocuHubClient()
 _guideline_repo = DocuHubGuidelineRepository(_docuhub_client)
 _persona_repo = DocuHubPersonaRepository(_docuhub_client)
-_guideline_set_repo = InMemoryGuidelineSetRepository()
-
 _run_repo = InMemoryWorkflowRunRepository()
 _inferrer = create_inferrer()
 _persona_selector = IntelligencePersonaSelector(_inferrer)
@@ -80,8 +77,8 @@ def get_persona_service(db: SessionLocal = Depends(get_db)) -> PersonaService:
     return PersonaService(_persona_repo, MySQLPersonaSetRepository(db, _persona_repo))
 
 
-def get_guideline_service() -> GuidelineService:
-    return GuidelineService(_guideline_repo, _guideline_set_repo)
+def get_guideline_service(db: SessionLocal = Depends(get_db)) -> GuidelineService:
+    return GuidelineService(_guideline_repo, MySQLGuidelineSetRepository(db, _guideline_repo))
 
 
 def get_persona_selector() -> PersonaSelector:
@@ -91,11 +88,12 @@ def get_persona_selector() -> PersonaSelector:
 def get_orchestrator(db: SessionLocal = Depends(get_db)) -> AgentOrchestrator:
     # Use fresh session for MySQL repositories
     persona_set_repo = MySQLPersonaSetRepository(db, _persona_repo)
+    guideline_set_repo = MySQLGuidelineSetRepository(db, _guideline_repo)
 
     return AgentOrchestrator(
         _inferrer,
         _guideline_repo,
-        _guideline_set_repo,
+        guideline_set_repo,
         persona_set_repo,
         _persona_selector,
         _run_repo,

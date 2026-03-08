@@ -56,4 +56,26 @@ export class ApiGuidelineRepository extends GuidelineRepository {
         const data = await response.json();
         return new GuidelineSet(data);
     }
+
+    async updateGuideline(id, data) {
+        const response = await fetch(`${this.baseUrl}/guidelines/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to update guideline');
+        const item = await response.json();
+        return new Guideline(item);
+    }
+
+    async updateGuidelineSet(id, data) {
+        const response = await fetch(`${this.baseUrl}/guidelines/sets/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Failed to update guideline set');
+        const item = await response.json();
+        return new GuidelineSet(item);
+    }
 }
