@@ -31,3 +31,6 @@ class StorageService(StorageUseCase):
             repo_name=repo_name,
             ref=ref
         )
+
+    async def init_repository(self, repo_name: str) -> bool:
+        return await self.docuhub_port.init_repo(repo_name=repo_name)

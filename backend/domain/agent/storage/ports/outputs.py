@@ -16,3 +16,8 @@ class DocuHubPort(ABC):
     async def read_file(self, path: str, ref: str, repo_name: str) -> str:
         """DocuHub에서 파일 내용을 가져옵니다."""
         pass
+
+    @abstractmethod
+    async def init_repo(self, repo_name: str) -> bool:
+        """DocuHub에 저장소를 초기화합니다."""
+        pass

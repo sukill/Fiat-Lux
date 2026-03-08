@@ -21,17 +21,21 @@ class DocuHubClient:
         self.namespace = self.settings.docuhub_user_id
         self.repo_name = repo_name or self.settings.docuhub_repo_name
 
-    async def init_repo(self, repo_name: Optional[str] = None, namespace: Optional[str] = None) -> Dict[str, Any]:
+    async def init_repo(self, repo_name: Optional[str] = None, namespace: Optional[str] = None) -> bool:
         """저장소를 초기화합니다."""
         target_repo = repo_name or self.repo_name
         target_namespace = namespace or self.namespace
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.base_url}/repo/init",
-                params={"namespace": target_namespace, "repo_name": target_repo},
-            )
-            response.raise_for_status()
-            return response.json()
+            try:
+                response = await client.post(
+                    f"{self.base_url}/repo/init",
+                    params={"namespace": target_namespace, "repo_name": target_repo},
+                )
+                response.raise_for_status()
+                return response.json().get("success", False)
+            except Exception as e:
+                print(f"Error initializing repo: {e}")
+                return False
 
     async def list_repos(self) -> List[str]:
         """저장소 목록을 조회합니다."""

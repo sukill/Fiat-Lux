@@ -17,3 +17,8 @@ class StorageUseCase(ABC):
     async def read_file(self, repo_name: str, path: str, ref: str = "main") -> FileContent:
         """파일의 내용을 읽어옵니다."""
         pass
+
+    @abstractmethod
+    async def init_repository(self, repo_name: str) -> bool:
+        """새로운 저장소를 초기화합니다."""
+        pass

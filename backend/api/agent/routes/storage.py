@@ -15,6 +15,15 @@ async def list_repositories(
     repos = await storage_service.list_repositories()
     return [RepositorySchema(name=r.name) for r in repos]
 
+@router.post("/repository")
+async def create_repository(
+    repo: RepositorySchema,
+    storage_service: StorageUseCase = Depends(get_storage_service)
+):
+    """새로운 저장소를 생성합니다."""
+    success = await storage_service.init_repository(repo.name)
+    return {"success": success}
+
 @router.get("/files", response_model=List[FileEntrySchema])
 async def list_files(
     repo_name: str = Query(..., description="저장소 이름"),

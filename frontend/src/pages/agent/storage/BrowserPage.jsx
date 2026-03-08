@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import RepoSelector from '../../../components/storage/RepoSelector';
 import FileTree from '../../../components/storage/FileTree';
 import FileViewer from '../../../components/storage/FileViewer';
-import { FolderTree, Home, ChevronRight, GitBranch } from 'lucide-react';
+import CreateRepoModal from '../../../components/storage/CreateRepoModal';
+import { FolderTree, Home, ChevronRight, GitBranch, Plus } from 'lucide-react';
 import CustomSelect from '../../../components/ui/CustomSelect';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -14,6 +15,9 @@ const BrowserPage = () => {
     const repoParam = searchParams.get('repo');
     const pathParam = searchParams.get('path') || '';
     const refParam = searchParams.get('ref') || 'main';
+
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
 
     // 브랜치/태그 목록 조회
     const { data: refs } = useQuery({
@@ -29,7 +33,7 @@ const BrowserPage = () => {
     });
 
     // 저장소 목록 조회
-    const { data: repos = [] } = useQuery({
+    const { data: repos = [], refetch: refetchRepos } = useQuery({
         queryKey: ['repositories'],
         queryFn: async () => {
             const res = await fetch(`${API_BASE_URL}/storage/repositories`);
@@ -52,7 +56,6 @@ const BrowserPage = () => {
     });
 
     // 파일 내용 조회 (선택된 것이 파일인 경우에만)
-    const [selectedFile, setSelectedFile] = useState(null);
     const { data: fileContent, isLoading: isContentLoading } = useQuery({
         queryKey: ['file', repoParam, selectedFile, refParam],
         queryFn: async () => {
@@ -67,6 +70,12 @@ const BrowserPage = () => {
 
     const handleRepoSelect = (repoName) => {
         setSearchParams({ repo: repoName, path: '', ref: 'main' });
+        setSelectedFile(null);
+    };
+
+    const handleCreateSuccess = (newRepoName) => {
+        refetchRepos();
+        setSearchParams({ repo: newRepoName, path: '', ref: 'main' });
         setSelectedFile(null);
     };
 
@@ -105,13 +114,28 @@ const BrowserPage = () => {
                             placeholder={refParam}
                         />
                     )}
-                    <RepoSelector
-                        repositories={repos}
-                        selectedRepo={repoParam}
-                        onSelect={handleRepoSelect}
-                    />
+                    <div className="flex items-center gap-2">
+                        <RepoSelector
+                            repositories={repos}
+                            selectedRepo={repoParam}
+                            onSelect={handleRepoSelect}
+                        />
+                        <button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="p-2 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 rounded-lg text-blue-400 hover:text-blue-300 transition-all shadow-sm"
+                            title="새 저장소 생성"
+                        >
+                            <Plus className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            <CreateRepoModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={handleCreateSuccess}
+            />
 
             {/* Breadcrumbs / Path bar */}
             <div id="browser-breadcrumbs" className="px-6 py-2 border-b border-slate-800 bg-slate-950 flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide">

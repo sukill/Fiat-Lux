@@ -224,6 +224,9 @@ class WorkflowResponse(BaseModel):
 class RepositorySchema(BaseModel):
     name: str
 
+class RepositoryCreate(BaseModel):
+    name: str
+
 class FileEntrySchema(BaseModel):
     name: str
     is_dir: bool
