@@ -14,7 +14,7 @@ class PersonaRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_id(self, persona_id: UUID, namespace: Optional[str] = None) -> Optional[AgentPersona]:
+    async def find_by_id(self, persona_id: UUID, namespace: Optional[str] = None, repository: Optional[str] = None, branch: Optional[str] = None) -> Optional[AgentPersona]:
         pass
 
     @abstractmethod

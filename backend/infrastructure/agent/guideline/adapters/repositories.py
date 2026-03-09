@@ -136,7 +136,8 @@ class DocuHubGuidelineRepository(GuidelineRepository):
             print(f"Error committing changes to DocuHub: {e}")
             raise
 
-    async def find_by_id(self, guideline_id: UUID) -> Optional[Guideline]:
+    async def find_by_id(self, guideline_id: UUID, repository: Optional[str] = None, branch: Optional[str] = None) -> Optional[Guideline]:
+        # If repository and branch are provided, we could optimize, but for now we search all via list_all
         all_guidelines = await self.list_all()
         for g in all_guidelines:
             if g.id == guideline_id:
@@ -268,23 +269,27 @@ class MySQLGuidelineSetRepository(GuidelineSetRepository):
             self.session.query(GuidelineSetORM).filter_by(id=str(guideline_set.id)).first()
         )
 
-        guideline_ids = [str(g.id) for g in guideline_set.guidelines]
+        # Store detailed references for each guideline
+        guideline_ids = [
+            {
+                "id": str(g.id),
+                "repository": g.repository,
+                "branch": g.branch
+            } 
+            for g in guideline_set.guidelines
+        ]
 
         if not orm_set:
             orm_set = GuidelineSetORM(
                 id=str(guideline_set.id),
                 name=guideline_set.name,
                 description=guideline_set.description,
-                repository=guideline_set.repository,
-                branch=guideline_set.branch,
                 guideline_ids=guideline_ids,
             )
             self.session.add(orm_set)
         else:
             orm_set.name = guideline_set.name
             orm_set.description = guideline_set.description
-            orm_set.repository = guideline_set.repository
-            orm_set.branch = guideline_set.branch
             orm_set.guideline_ids = guideline_ids
         
         self.session.commit()
@@ -294,15 +299,20 @@ class MySQLGuidelineSetRepository(GuidelineSetRepository):
         if not orm_set:
             return None
 
-        # Resolve guidelines from DocuHub using the IDs list
+        # Resolve guidelines from DocuHub using the IDs list with specific repo/branch
         guidelines = []
-        for g_id_str in orm_set.guideline_ids:
-            g_id = UUID(g_id_str)
+        for ref in orm_set.guideline_ids:
+            # Handle both old string format and new dict format for migration safety
+            if isinstance(ref, str):
+                g_id = UUID(ref)
+                g_repo, g_branch = None, None
+            else:
+                g_id = UUID(ref["id"])
+                g_repo = ref.get("repository")
+                g_branch = ref.get("branch")
+
             if self.guideline_repo:
-                # Note: DocuHubGuidelineRepository currently uses self.repo_name="guideline-repo".
-                # We might need to pass the repository/branch from orm_set to the fetcher, 
-                # but let's stick to the current port signature for now.
-                g = await self.guideline_repo.find_by_id(g_id)
+                g = await self.guideline_repo.find_by_id(g_id, repository=g_repo, branch=g_branch)
                 if g:
                     guidelines.append(g)
 
@@ -310,8 +320,6 @@ class MySQLGuidelineSetRepository(GuidelineSetRepository):
             id=UUID(orm_set.id),
             name=orm_set.name,
             description=orm_set.description,
-            repository=orm_set.repository,
-            branch=orm_set.branch,
             guidelines=guidelines
         )
 

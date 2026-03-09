@@ -40,22 +40,21 @@ class GuidelineService:
         self, 
         name: str, 
         description: str = None, 
-        repository: str = "guideline-repo",
-        branch: str = "main",
-        guideline_ids: List[UUID] = None
+        items: List[dict] = None
     ) -> GuidelineSet:
         guidelines = []
-        if guideline_ids:
-            for g_id in guideline_ids:
-                g = await self.repo.find_by_id(g_id)
+        if items:
+            for item in items:
+                g_id = item["id"]
+                g_repo = item.get("repository")
+                g_branch = item.get("branch")
+                g = await self.repo.find_by_id(g_id, repository=g_repo, branch=g_branch)
                 if g:
                     guidelines.append(g)
 
         guideline_set = GuidelineSet(
             name=name, 
             description=description, 
-            repository=repository,
-            branch=branch,
             guidelines=guidelines
         )
         await self.set_repo.save(guideline_set)
@@ -99,9 +98,7 @@ class GuidelineService:
         set_id: UUID,
         name: str = None,
         description: str = None,
-        repository: str = None,
-        branch: str = None,
-        guideline_ids: List[UUID] = None
+        items: List[dict] = None
     ) -> Optional[GuidelineSet]:
         guideline_set = await self.set_repo.find_by_id(set_id)
         if not guideline_set:
@@ -111,15 +108,14 @@ class GuidelineService:
             guideline_set.name = name
         if description is not None:
             guideline_set.description = description
-        if repository is not None:
-            guideline_set.repository = repository
-        if branch is not None:
-            guideline_set.branch = branch
             
-        if guideline_ids is not None:
+        if items is not None:
             guidelines = []
-            for g_id in guideline_ids:
-                g = await self.repo.find_by_id(g_id)
+            for item in items:
+                g_id = item["id"]
+                g_repo = item.get("repository")
+                g_branch = item.get("branch")
+                g = await self.repo.find_by_id(g_id, repository=g_repo, branch=g_branch)
                 if g:
                     guidelines.append(g)
             guideline_set.guidelines = guidelines

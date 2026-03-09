@@ -48,19 +48,23 @@ class DocuHubPersonaRepository(PersonaRepository):
         await self.save(persona)
         return persona
 
-    async def find_by_id(self, persona_id: UUID, namespace: Optional[str] = None) -> Optional[AgentPersona]:
+    async def find_by_id(self, persona_id: UUID, namespace: Optional[str] = None, repository: Optional[str] = None, branch: Optional[str] = None) -> Optional[AgentPersona]:
+        # For now, we still search through the list_all which scans the default persona-repo.
+        # However, we allow passing specific repository and branch for future targeted lookups.
         all_personas = await self.list_all(namespace=namespace)
         for p in all_personas:
             if p.id == persona_id:
                 return p
         return None
 
-    async def list_all(self, namespace: Optional[str] = None) -> List[AgentPersona]:
+    async def list_all(self, namespace: Optional[str] = None, repository: Optional[str] = None, branch: Optional[str] = None) -> List[AgentPersona]:
         personas = []
+        target_repo = repository or self.repo_name
+        target_branch = branch or "main"
 
         async def _recursive_list(current_path: str, relative_dir: Optional[str] = None):
             try:
-                entries = await self.client.list_files(current_path, repo_name=self.repo_name, namespace=namespace)
+                entries = await self.client.list_files(current_path, repo_name=target_repo, namespace=namespace, ref=target_branch)
             except Exception:
                 return
 
@@ -71,10 +75,12 @@ class DocuHubPersonaRepository(PersonaRepository):
                     await _recursive_list(full_path, next_rel_dir)
                 elif entry["name"].endswith(".json"):
                     try:
-                        content = await self.client.read_file(full_path, repo_name=self.repo_name, namespace=namespace)
+                        content = await self.client.read_file(full_path, repo_name=target_repo, namespace=namespace, ref=target_branch)
                         if content:
                             persona = AgentPersona.model_validate_json(content)
-                            # Ensure directory field is set correctly from the filesystem if missing in JSON
+                            # Ensure metadata is consistent with where it was found
+                            persona.repository = target_repo
+                            persona.branch = target_branch
                             if not persona.directory:
                                 persona.directory = relative_dir
                             personas.append(persona)
@@ -111,7 +117,15 @@ class MySQLPersonaSetRepository(PersonaSetRepository):
             self.session.query(PersonaSetORM).filter_by(id=str(persona_set.id)).first()
         )
 
-        persona_ids = [str(p.id) for p in persona_set.personas]
+        # Store detailed references for each persona
+        persona_ids = [
+            {
+                "id": str(p.id),
+                "repository": p.repository,
+                "branch": p.branch
+            } 
+            for p in persona_set.personas
+        ]
 
         if not orm_set:
             orm_set = PersonaSetORM(
@@ -119,8 +133,6 @@ class MySQLPersonaSetRepository(PersonaSetRepository):
                 name=persona_set.name,
                 description=persona_set.description,
                 owner=persona_set.owner,
-                repository=persona_set.repository,
-                branch=persona_set.branch,
                 persona_ids=persona_ids,
             )
             self.session.add(orm_set)
@@ -128,8 +140,6 @@ class MySQLPersonaSetRepository(PersonaSetRepository):
             orm_set.name = persona_set.name
             orm_set.description = persona_set.description
             orm_set.owner = persona_set.owner
-            orm_set.repository = persona_set.repository
-            orm_set.branch = persona_set.branch
             orm_set.persona_ids = persona_ids
         self.session.commit()
 
@@ -138,26 +148,28 @@ class MySQLPersonaSetRepository(PersonaSetRepository):
         if not orm_set:
             return None
 
-        # Resolve personas from DocuHub using the IDs list
+        # Resolve personas from DocuHub using the IDs list with specific repo/branch
         personas = []
-        for p_id_str in orm_set.persona_ids:
-            p_id = UUID(p_id_str)
+        for ref in orm_set.persona_ids:
+            # Handle both old string format and new dict format for migration safety
+            if isinstance(ref, str):
+                p_id = UUID(ref)
+                p_repo, p_branch = None, None
+            else:
+                p_id = UUID(ref["id"])
+                p_repo = ref.get("repository")
+                p_branch = ref.get("branch")
+
             if self.persona_repo:
-                p = await self.persona_repo.find_by_id(p_id)
+                p = await self.persona_repo.find_by_id(p_id, repository=p_repo, branch=p_branch)
                 if p:
                     personas.append(p)
-                else:
-                    # In this setup, we don't have a DB fallback anymore, 
-                    # but we could create a partial object if DocuHub fails.
-                    pass
 
         return PersonaSet(
             id=UUID(orm_set.id),
             name=orm_set.name,
             description=orm_set.description,
             owner=orm_set.owner,
-            repository=orm_set.repository,
-            branch=orm_set.branch,
             personas=personas,
             created_at=orm_set.created_at,
         )
@@ -169,14 +181,19 @@ class MySQLPersonaSetRepository(PersonaSetRepository):
         if not orm_set:
             raise ValueError(f"PersonaSet {persona_set.id} not found")
 
-        # Update persona IDs
-        persona_ids = [str(p.id) for p in persona_set.personas]
+        # Update persona references
+        persona_ids = [
+            {
+                "id": str(p.id),
+                "repository": p.repository,
+                "branch": p.branch
+            } 
+            for p in persona_set.personas
+        ]
 
         orm_set.name = persona_set.name
         orm_set.description = persona_set.description
         orm_set.owner = persona_set.owner
-        orm_set.repository = persona_set.repository
-        orm_set.branch = persona_set.branch
         orm_set.persona_ids = persona_ids
 
         self.session.commit()

@@ -16,7 +16,5 @@ class PersonaSetORM(Base) :
     name = Column(String(255), nullable=False)
     description = Column(String(1000), nullable=True)
     owner = Column(String(255), nullable=False, default="fiat-lux-system")
-    repository = Column(String(255), nullable=False, default="persona-repo")
-    branch = Column(String(255), nullable=False, default="main")
-    persona_ids = Column(JSON, nullable=False)  # List of persona UUID strings
+    persona_ids = Column(JSON, nullable=False)  # List of objects: [{"id": UUID, "repository": str, "branch": str}]
     created_at = Column(DateTime, server_default=func.now())

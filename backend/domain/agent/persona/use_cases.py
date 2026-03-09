@@ -88,14 +88,15 @@ class PersonaService:
         name: str,
         description: str = None,
         owner: str = None,
-        repository: str = None,
-        branch: str = None,
-        persona_ids: List[UUID] = None,
+        items: List[dict] = None,
     ) -> PersonaSet:
         personas = []
-        if persona_ids:
-            for p_id in persona_ids:
-                p = await self.repo.find_by_id(p_id)
+        if items:
+            for item in items:
+                p_id = item["id"]
+                p_repo = item.get("repository")
+                p_branch = item.get("branch")
+                p = await self.repo.find_by_id(p_id, repository=p_repo, branch=p_branch)
                 if p:
                     personas.append(p)
 
@@ -103,8 +104,6 @@ class PersonaService:
             name=name,
             description=description,
             owner=owner or "fiat-lux-system",
-            repository=repository or "guideline-persona-repo",
-            branch=branch or "main",
             personas=personas,
         )
         await self.set_repo.save(persona_set)
@@ -119,9 +118,7 @@ class PersonaService:
         name: str = None,
         description: str = None,
         owner: str = None,
-        repository: str = None,
-        branch: str = None,
-        persona_ids: List[UUID] = None,
+        items: List[dict] = None,
     ) -> Optional[PersonaSet]:
         persona_set = await self.set_repo.find_by_id(set_id)
         if not persona_set:
@@ -133,14 +130,14 @@ class PersonaService:
             persona_set.description = description
         if owner is not None:
             persona_set.owner = owner
-        if repository is not None:
-            persona_set.repository = repository
-        if branch is not None:
-            persona_set.branch = branch
-        if persona_ids is not None:
+        
+        if items is not None:
             personas = []
-            for p_id in persona_ids:
-                p = await self.repo.find_by_id(p_id)
+            for item in items:
+                p_id = item["id"]
+                p_repo = item.get("repository")
+                p_branch = item.get("branch")
+                p = await self.repo.find_by_id(p_id, repository=p_repo, branch=p_branch)
                 if p:
                     personas.append(p)
             persona_set.personas = personas

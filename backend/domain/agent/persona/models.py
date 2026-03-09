@@ -15,6 +15,7 @@ class AgentPersona(BaseModel):
     guidelines: List[str] = Field(default_factory=list)
     namespace: str = "fiat-lux-system"
     repository: str = "persona-repo"
+    branch: str = "main"
     directory: Optional[str] = None
     created_at: Optional[datetime] = Field(default_factory=datetime.now)
 
@@ -27,8 +28,6 @@ class PersonaSet(BaseModel):
     name: str
     description: Optional[str] = None
     owner: str = "fiat-lux-system"
-    repository: str = "guideline-persona-repo"
-    branch: str = "main"
     personas: List[AgentPersona] = Field(default_factory=list)
     created_at: Optional[datetime] = None
 
