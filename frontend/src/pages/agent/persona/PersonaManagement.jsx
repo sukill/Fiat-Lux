@@ -97,9 +97,7 @@ const PersonaManagement = () => {
     const [setData, setSetData] = useState({
         name: '',
         description: '',
-        repository: 'persona-repo',
-        branch: 'main',
-        persona_ids: []
+        items: []
     });
     const [editData, setEditData] = useState({
         name: '',
@@ -113,9 +111,7 @@ const PersonaManagement = () => {
     const [editSetData, setEditSetData] = useState({
         name: '',
         description: '',
-        repository: 'persona-repo',
-        branch: 'main',
-        persona_ids: []
+        items: []
     });
 
     useEffect(() => {
@@ -138,9 +134,11 @@ const PersonaManagement = () => {
             setEditSetData({
                 name: editingSet.name || '',
                 description: editingSet.description || '',
-                repository: editingSet.repository || 'persona-repo',
-                branch: editingSet.branch || 'main',
-                persona_ids: (editingSet.personas || []).map(p => p.id)
+                items: (editingSet.personas || []).map(p => ({
+                    id: p.id,
+                    repository: p.repository || 'persona-repo',
+                    branch: p.branch || 'main'
+                }))
             });
         }
     }, [editingSet]);
@@ -202,7 +200,7 @@ const PersonaManagement = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['personaSets'] });
             setIsSetModalOpen(false);
-            setSetData({ name: '', description: '', persona_ids: [] });
+            setSetData({ name: '', description: '', items: [] });
         }
     });
 
@@ -694,66 +692,36 @@ const PersonaManagement = () => {
                             rows={3}
                         />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                    <Book size={14} className="text-indigo-600" /> Target Repository
-                                </label>
-                                <div className="flex gap-2 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-200">
-                                    {repositories?.filter(r => r.name.toLowerCase().includes('persona')).map(repo => (
-                                        <button
-                                            key={repo.name}
-                                            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${setData.repository === repo.name ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                            onClick={() => setSetData({ ...setData, repository: repo.name, branch: 'main' })}
-                                        >
-                                            {repo.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                    <Filter size={14} className="text-indigo-600" /> Version Control
-                                </label>
-                                <select
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer font-medium"
-                                    value={setData.branch}
-                                    onChange={(e) => setSetData({ ...setData, branch: e.target.value })}
-                                >
-                                    {createSetRefs?.map(ref => (
-                                        <option key={ref.name} value={ref.name}>{ref.name}</option>
-                                    ))}
-                                    {!createSetRefs?.length && <option value="main">main</option>}
-                                </select>
-                            </div>
-                        </div>
-
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                     <Users size={14} className="text-indigo-600" /> Member Personas
                                 </label>
                                 <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                                    {setData.persona_ids.length} SELECTED
+                                    {setData.items.length} SELECTED
                                 </span>
                             </div>
                             <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto p-4 bg-slate-50 border border-slate-100 rounded-2xl scrollbar-thin">
                                 {personas?.map(p => (
-                                    <label key={p.id} className={`flex items-center gap-4 px-4 py-3 rounded-xl border transition-all cursor-pointer group ${setData.persona_ids.includes(p.id) ? 'bg-white border-indigo-200 shadow-sm shadow-indigo-100/50' : 'bg-white/50 border-transparent hover:border-slate-200'}`}>
+                                    <label key={p.id} className={`flex items-center gap-4 px-4 py-3 rounded-xl border transition-all cursor-pointer group ${setData.items.some(item => item.id === p.id) ? 'bg-white border-indigo-200 shadow-sm shadow-indigo-100/50' : 'bg-white/50 border-transparent hover:border-slate-200'}`}>
                                         <input
                                             type="checkbox"
                                             className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-0 transition-all cursor-pointer"
-                                            checked={setData.persona_ids.includes(p.id)}
+                                            checked={setData.items.some(item => item.id === p.id)}
                                             onChange={(e) => {
-                                                const ids = e.target.checked
-                                                    ? [...setData.persona_ids, p.id]
-                                                    : setData.persona_ids.filter(id => id !== p.id);
-                                                setSetData({ ...setData, persona_ids: ids });
+                                                const items = e.target.checked
+                                                    ? [...setData.items, { id: p.id, repository: p.repository || 'persona-repo', branch: p.branch || 'main' }]
+                                                    : setData.items.filter(item => item.id !== p.id);
+                                                setSetData({ ...setData, items });
                                             }}
                                         />
                                         <div className="flex-1">
-                                            <p className={`text-sm font-bold ${setData.persona_ids.includes(p.id) ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>{p.name || 'Unnamed'}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{p.role}</p>
+                                            <p className={`text-sm font-bold ${setData.items.some(item => item.id === p.id) ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>{p.name || 'Unnamed'}</p>
+                                            <div className="flex gap-2 items-center">
+                                                <span className="text-[9px] text-slate-400 font-medium">{p.repository || 'persona-repo'}</span>
+                                                <span className="text-[9px] text-slate-300">/</span>
+                                                <span className="text-[9px] text-slate-400 font-medium">{p.branch || 'main'}</span>
+                                            </div>
                                         </div>
                                     </label>
                                 ))}
@@ -1019,14 +987,6 @@ const PersonaManagement = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <h4 className="text-2xl font-black text-slate-900 tracking-tight">{selectedSet.name}</h4>
-                                        <div className="flex gap-2">
-                                            <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200/50 uppercase tracking-widest">
-                                                {selectedSet.repository}
-                                            </span>
-                                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 uppercase tracking-widest">
-                                                {selectedSet.branch}
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
                                 <p className="text-slate-600 text-sm font-medium leading-relaxed max-w-md">
@@ -1050,7 +1010,11 @@ const PersonaManagement = () => {
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-slate-700">{persona.name || 'Unnamed'}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{persona.role}</p>
+                                            <div className="flex gap-2 items-center">
+                                                <span className="text-[9px] text-slate-400 font-medium">{persona.repository || 'persona-repo'}</span>
+                                                <span className="text-[9px] text-slate-300">/</span>
+                                                <span className="text-[9px] text-slate-400 font-medium">{persona.branch || 'main'}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -1107,52 +1071,18 @@ const PersonaManagement = () => {
                                 rows={3}
                             />
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-3">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                        <Book size={14} className="text-indigo-600" /> Target Repository
-                                    </label>
-                                    <div className="flex gap-2 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-200">
-                                        {repositories?.filter(r => (r.name || '').toLowerCase().includes('persona')).map(repo => (
-                                            <button
-                                                key={repo.name}
-                                                className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${editSetData.repository === repo.name ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                                onClick={() => setEditSetData({ ...editSetData, repository: repo.name, branch: 'main' })}
-                                            >
-                                                {repo.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="space-y-3">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                        <Filter size={14} className="text-indigo-600" /> Version Control
-                                    </label>
-                                    <select
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer font-medium"
-                                        value={editSetData.branch}
-                                        onChange={(e) => setEditSetData({ ...editSetData, branch: e.target.value })}
-                                    >
-                                        {editSetRefs?.map(ref => (
-                                            <option key={ref.name} value={ref.name}>{ref.name}</option>
-                                        ))}
-                                        {!editSetRefs?.length && <option value="main">main</option>}
-                                    </select>
-                                </div>
-                            </div>
-
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                         <Users size={14} className="text-indigo-600" /> Member Personas
                                     </label>
                                     <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                                        {editSetData.persona_ids.length} SELECTED
+                                        {editSetData.items.length} SELECTED
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto p-4 bg-slate-50 border border-slate-100 rounded-2xl scrollbar-thin">
                                     {personas?.map(p => {
-                                        const isSelected = editSetData.persona_ids.includes(p.id);
+                                        const isSelected = editSetData.items.some(item => item.id === p.id);
                                         return (
                                             <label key={p.id} className={`flex items-center gap-4 px-4 py-3 rounded-xl border transition-all cursor-pointer group ${isSelected ? 'bg-white border-indigo-200 shadow-sm shadow-indigo-100/50' : 'bg-white/50 border-transparent hover:border-slate-200'}`}>
                                                 <input
@@ -1160,15 +1090,19 @@ const PersonaManagement = () => {
                                                     className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-0 transition-all cursor-pointer"
                                                     checked={isSelected}
                                                     onChange={(e) => {
-                                                        const ids = e.target.checked
-                                                            ? [...editSetData.persona_ids, p.id]
-                                                            : editSetData.persona_ids.filter(id => id !== p.id);
-                                                        setEditSetData({ ...editSetData, persona_ids: ids });
+                                                        const items = e.target.checked
+                                                            ? [...editSetData.items, { id: p.id, repository: p.repository || 'persona-repo', branch: p.branch || 'main' }]
+                                                            : editSetData.items.filter(item => item.id !== p.id);
+                                                        setEditSetData({ ...editSetData, items });
                                                     }}
                                                 />
                                                 <div className="flex-1">
                                                     <p className={`text-sm font-bold ${isSelected ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>{p.name || 'Unnamed'}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{p.role}</p>
+                                                    <div className="flex gap-2 items-center">
+                                                        <span className="text-[9px] text-slate-400 font-medium">{p.repository || 'persona-repo'}</span>
+                                                        <span className="text-[9px] text-slate-300">/</span>
+                                                        <span className="text-[9px] text-slate-400 font-medium">{p.branch || 'main'}</span>
+                                                    </div>
                                                 </div>
                                             </label>
                                         );
@@ -1196,7 +1130,7 @@ const PersonaManagement = () => {
                     </div>
                 )}
             </Modal>
-        </div>
+        </div >
     );
 };
 

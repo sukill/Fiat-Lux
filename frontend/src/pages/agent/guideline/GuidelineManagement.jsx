@@ -33,16 +33,12 @@ const GuidelineManagement = () => {
     const [setData, setSetData] = useState({
         name: '',
         description: '',
-        repository: 'guideline-repo',
-        branch: 'main',
-        guideline_ids: []
+        items: []
     });
     const [editSetData, setEditSetData] = useState({
         name: '',
         description: '',
-        repository: 'guideline-repo',
-        branch: 'main',
-        guideline_ids: []
+        items: []
     });
     const [editGuidelineData, setEditGuidelineData] = useState({
         title: '',
@@ -63,9 +59,11 @@ const GuidelineManagement = () => {
             setEditSetData({
                 name: editingSet.name || '',
                 description: editingSet.description || '',
-                repository: editingSet.repository || 'guideline-repo',
-                branch: editingSet.branch || 'main',
-                guideline_ids: (editingSet.guidelines || []).map(g => g.id)
+                items: (editingSet.guidelines || []).map(g => ({
+                    id: g.id,
+                    repository: g.repository,
+                    branch: g.branch
+                }))
             });
         }
     }, [editingSet]);
@@ -139,9 +137,7 @@ const GuidelineManagement = () => {
             setSetData({
                 name: '',
                 description: '',
-                repository: 'guideline-repo',
-                branch: 'main',
-                guideline_ids: []
+                items: []
             });
         }
     });
@@ -585,60 +581,35 @@ const GuidelineManagement = () => {
                             value={setData.description}
                             onChange={(e) => setSetData({ ...setData, description: e.target.value })}
                         />
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-300">Repository</label>
-                                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
-                                    {repositories?.filter(r => r.name.toLowerCase().includes('guideline')).map(repo => (
-                                        <button
-                                            key={repo.name}
-                                            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${setData.repository === repo.name ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                            onClick={() => setSetData({ ...setData, repository: repo.name, branch: 'main' })}
-                                        >
-                                            {repo.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-300">Branch / Ref</label>
-                                <select
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer"
-                                    value={setData.branch}
-                                    onChange={(e) => setSetData({ ...setData, branch: e.target.value })}
-                                >
-                                    {branchRefs?.map(ref => (
-                                        <option key={ref.name} value={ref.name}>{ref.name}</option>
-                                    ))}
-                                    {!branchRefs?.length && <option value="main">main</option>}
-                                </select>
-                            </div>
-                        </div>
                     </div>
                     <div className="space-y-3">
                         <div className="flex justify-between items-center px-1">
                             <label className="text-sm font-bold text-slate-600">Module Integration</label>
-                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 uppercase tracking-wider">{setData.guideline_ids.length} integrated</span>
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 uppercase tracking-wider">{setData.items.length} integrated</span>
                         </div>
                         <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-3 bg-slate-50 rounded-2xl border border-slate-100 scrollbar-thin">
                             {guidelines?.map(g => (
-                                <label key={g.id} className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer group ${setData.guideline_ids.includes(g.id) ? 'bg-white border-indigo-200 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/50 hover:border-slate-200'}`}>
+                                <label key={g.id} className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer group ${setData.items.some(item => item.id === g.id) ? 'bg-white border-indigo-200 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/50 hover:border-slate-200'}`}>
                                     <input
                                         type="checkbox"
                                         className="w-5 h-5 rounded-lg border-slate-300 bg-white text-indigo-600 focus:ring-0 transition-all cursor-pointer"
-                                        checked={setData.guideline_ids.includes(g.id)}
+                                        checked={setData.items.some(item => item.id === g.id)}
                                         onChange={(e) => {
-                                            const ids = e.target.checked
-                                                ? [...setData.guideline_ids, g.id]
-                                                : setData.guideline_ids.filter(id => id !== g.id);
-                                            setSetData({ ...setData, guideline_ids: ids });
+                                            const items = e.target.checked
+                                                ? [...setData.items, { id: g.id, repository: g.repository, branch: g.branch }]
+                                                : setData.items.filter(item => item.id !== g.id);
+                                            setSetData({ ...setData, items });
                                         }}
                                     />
                                     <div className="flex-1">
-                                        <p className={`text-sm font-bold ${setData.guideline_ids.includes(g.id) ? 'text-indigo-600' : 'text-slate-600 group-hover:text-slate-900'}`}>{g.title}</p>
+                                        <p className={`text-sm font-bold ${setData.items.some(item => item.id === g.id) ? 'text-indigo-600' : 'text-slate-600 group-hover:text-slate-900'}`}>{g.title}</p>
+                                        <div className="flex gap-2 items-center">
+                                            <span className="text-[9px] text-slate-400 font-medium">{g.repository}</span>
+                                            <span className="text-[9px] text-slate-300">/</span>
+                                            <span className="text-[9px] text-slate-400 font-medium">{g.branch}</span>
+                                        </div>
                                     </div>
-                                    <FileText size={16} className={setData.guideline_ids.includes(g.id) ? 'text-indigo-400' : 'text-slate-400'} />
+                                    <FileText size={16} className={setData.items.some(item => item.id === g.id) ? 'text-indigo-400' : 'text-slate-400'} />
                                 </label>
                             ))}
                             {guidelines?.length === 0 && <p className="text-center py-8 text-sm text-slate-400 font-bold italic">No guidelines available to set.</p>}
@@ -743,14 +714,6 @@ const GuidelineManagement = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <h4 className="text-2xl font-black text-slate-900 tracking-tight">{selectedSet.name}</h4>
-                                        <div className="flex gap-2">
-                                            <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200/50 uppercase tracking-widest">
-                                                {selectedSet.repository}
-                                            </span>
-                                            <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100 uppercase tracking-widest">
-                                                {selectedSet.branch}
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
                                 <p className="text-slate-600 text-sm font-medium leading-relaxed max-w-md">
@@ -774,7 +737,11 @@ const GuidelineManagement = () => {
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-slate-700">{g.title}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Guideline Module</p>
+                                            <div className="flex gap-2 items-center">
+                                                <span className="text-[9px] text-slate-400 font-medium">{g.repository}</span>
+                                                <span className="text-[9px] text-slate-300">/</span>
+                                                <span className="text-[9px] text-slate-400 font-medium">{g.branch}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -828,60 +795,35 @@ const GuidelineManagement = () => {
                             value={editSetData.description}
                             onChange={(e) => setEditSetData({ ...editSetData, description: e.target.value })}
                         />
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-300">Repository</label>
-                                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
-                                    {repositories?.filter(r => r.name.toLowerCase().includes('guideline')).map(repo => (
-                                        <button
-                                            key={repo.name}
-                                            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${editSetData.repository === repo.name ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                            onClick={() => setEditSetData({ ...editSetData, repository: repo.name, branch: 'main' })}
-                                        >
-                                            {repo.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-300">Branch / Ref</label>
-                                <select
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer"
-                                    value={editSetData.branch}
-                                    onChange={(e) => setEditSetData({ ...editSetData, branch: e.target.value })}
-                                >
-                                    {editSetRefs?.map(ref => (
-                                        <option key={ref.name} value={ref.name}>{ref.name}</option>
-                                    ))}
-                                    {!editSetRefs?.length && <option value="main">main</option>}
-                                </select>
-                            </div>
-                        </div>
                     </div>
                     <div className="space-y-3">
                         <div className="flex justify-between items-center px-1">
                             <label className="text-sm font-bold text-slate-600">Module Integration</label>
-                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 uppercase tracking-wider">{editSetData.guideline_ids.length} integrated</span>
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 uppercase tracking-wider">{editSetData.items.length} integrated</span>
                         </div>
                         <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-3 bg-slate-50 rounded-2xl border border-slate-100 scrollbar-thin">
                             {guidelines?.map(g => (
-                                <label key={g.id} className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer group ${editSetData.guideline_ids.includes(g.id) ? 'bg-white border-indigo-200 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/50 hover:border-slate-200'}`}>
+                                <label key={g.id} className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all cursor-pointer group ${editSetData.items.some(item => item.id === g.id) ? 'bg-white border-indigo-200 shadow-sm' : 'bg-transparent border-transparent hover:bg-white/50 hover:border-slate-200'}`}>
                                     <input
                                         type="checkbox"
                                         className="w-5 h-5 rounded-lg border-slate-300 bg-white text-indigo-600 focus:ring-0 transition-all cursor-pointer"
-                                        checked={editSetData.guideline_ids.includes(g.id)}
+                                        checked={editSetData.items.some(item => item.id === g.id)}
                                         onChange={(e) => {
-                                            const ids = e.target.checked
-                                                ? [...editSetData.guideline_ids, g.id]
-                                                : editSetData.guideline_ids.filter(id => id !== g.id);
-                                            setEditSetData({ ...editSetData, guideline_ids: ids });
+                                            const items = e.target.checked
+                                                ? [...editSetData.items, { id: g.id, repository: g.repository, branch: g.branch }]
+                                                : editSetData.items.filter(item => item.id !== g.id);
+                                            setEditSetData({ ...editSetData, items });
                                         }}
                                     />
                                     <div className="flex-1">
-                                        <p className={`text-sm font-bold ${editSetData.guideline_ids.includes(g.id) ? 'text-indigo-600' : 'text-slate-600 group-hover:text-slate-900'}`}>{g.title}</p>
+                                        <p className={`text-sm font-bold ${editSetData.items.some(item => item.id === g.id) ? 'text-indigo-600' : 'text-slate-600 group-hover:text-slate-900'}`}>{g.title}</p>
+                                        <div className="flex gap-2 items-center">
+                                            <span className="text-[9px] text-slate-400 font-medium">{g.repository}</span>
+                                            <span className="text-[9px] text-slate-300">/</span>
+                                            <span className="text-[9px] text-slate-400 font-medium">{g.branch}</span>
+                                        </div>
                                     </div>
-                                    <FileText size={16} className={editSetData.guideline_ids.includes(g.id) ? 'text-indigo-400' : 'text-slate-400'} />
+                                    <FileText size={16} className={editSetData.items.some(item => item.id === g.id) ? 'text-indigo-400' : 'text-slate-400'} />
                                 </label>
                             ))}
                         </div>
