@@ -8,7 +8,14 @@ from domain.agent.guideline.models import (
     GuidelineSet as DomainGuidelineSet,
 )
 from domain.agent.workflow.models import WorkflowRun as DomainWorkflowRun
+from pydantic import ConfigDict
 
+
+# --- Common Schemas ---
+class ItemReference(BaseModel):
+    id: UUID
+    repository: str
+    branch: str = "main"
 
 # --- Guideline Schemas ---
 class GuidelineCreate(BaseModel):
@@ -50,25 +57,19 @@ class GuidelineSchema(BaseModel):
 class GuidelineSetCreate(BaseModel):
     name: str
     description: Optional[str] = None
-    repository: Optional[str] = Field("guideline-repo", description="DocuHub repository name")
-    branch: Optional[str] = Field("main", description="DocuHub branch name")
-    guideline_ids: List[UUID] = Field(default_factory=list)
+    items: List[ItemReference] = Field(default_factory=list)
 
 
 class GuidelineSetUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    repository: Optional[str] = None
-    branch: Optional[str] = None
-    guideline_ids: Optional[List[UUID]] = None
+    items: Optional[List[ItemReference]] = None
 
 
 class GuidelineSetSchema(BaseModel):
     id: UUID
     name: str
     description: Optional[str] = None
-    repository: str
-    branch: str
     guidelines: List[GuidelineSchema]
 
     @classmethod
@@ -77,8 +78,6 @@ class GuidelineSetSchema(BaseModel):
             id=guideline_set.id,
             name=guideline_set.name,
             description=guideline_set.description,
-            repository=guideline_set.repository,
-            branch=guideline_set.branch,
             guidelines=[
                 GuidelineSchema.from_domain(g) for g in guideline_set.guidelines
             ],
@@ -145,19 +144,15 @@ class PersonaSchema(BaseModel):
 class PersonaSetCreate(BaseModel):
     name: str
     description: Optional[str] = Field(None, description="Detailed description of the persona set")
-    owner: Optional[str] = Field(None, description="DocuHub namespace/owner")
-    repository: Optional[str] = Field(None, description="DocuHub repository name")
-    branch: Optional[str] = Field(None, description="DocuHub branch name")
-    persona_ids: List[UUID] = Field(default_factory=list)
+    owner: Optional[str] = Field("fiat-lux-system", description="DocuHub namespace/owner")
+    items: List[ItemReference] = Field(default_factory=list)
 
 
 class PersonaSetUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     owner: Optional[str] = None
-    repository: Optional[str] = None
-    branch: Optional[str] = None
-    persona_ids: Optional[List[UUID]] = None
+    items: Optional[List[ItemReference]] = None
 
 
 class PersonaSetSchema(BaseModel):
@@ -165,8 +160,6 @@ class PersonaSetSchema(BaseModel):
     name: str
     description: Optional[str] = None
     owner: str
-    repository: str
-    branch: str
     personas: List[PersonaSchema]
     created_at: datetime
 
@@ -177,8 +170,6 @@ class PersonaSetSchema(BaseModel):
             name=persona_set.name,
             description=persona_set.description,
             owner=persona_set.owner,
-            repository=persona_set.repository,
-            branch=persona_set.branch,
             personas=[PersonaSchema.from_domain(p) for p in persona_set.personas],
             created_at=persona_set.created_at or datetime.now(),
         )

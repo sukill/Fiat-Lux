@@ -23,9 +23,7 @@ async def create_persona_set(
         name=request.name,
         description=request.description,
         owner=request.owner,
-        repository=request.repository,
-        branch=request.branch,
-        persona_ids=request.persona_ids,
+        items=[item.model_dump() for item in request.items],
     )
     return PersonaSetSchema.from_domain(persona_set)
 
@@ -57,9 +55,7 @@ async def update_persona_set(
         name=request.name,
         description=request.description,
         owner=request.owner,
-        repository=request.repository,
-        branch=request.branch,
-        persona_ids=request.persona_ids,
+        items=[item.model_dump() for item in request.items] if request.items is not None else None,
     )
     if not persona_set:
         raise HTTPException(status_code=404, detail="Persona set not found")

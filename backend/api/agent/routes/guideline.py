@@ -67,9 +67,7 @@ async def create_guideline_set(
     guideline_set = await service.create_guideline_set(
         name=request.name,
         description=request.description,
-        repository=request.repository,
-        branch=request.branch,
-        guideline_ids=request.guideline_ids,
+        items=[item.model_dump() for item in request.items],
     )
     return GuidelineSetSchema.from_domain(guideline_set)
 
@@ -102,9 +100,7 @@ async def update_guideline_set(
         set_id=set_id,
         name=request.name,
         description=request.description,
-        repository=request.repository,
-        branch=request.branch,
-        guideline_ids=request.guideline_ids,
+        items=[item.model_dump() for item in request.items] if request.items is not None else None,
     )
     if not guideline_set:
         raise HTTPException(status_code=404, detail="Guideline set not found")

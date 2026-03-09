@@ -10,7 +10,7 @@ class GuidelineRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_id(self, guideline_id: UUID) -> Optional[Guideline]:
+    async def find_by_id(self, guideline_id: UUID, repository: Optional[str] = None, branch: Optional[str] = None) -> Optional[Guideline]:
         pass
 
     @abstractmethod
