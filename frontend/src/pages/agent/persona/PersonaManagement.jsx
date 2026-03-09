@@ -80,7 +80,6 @@ const PersonaManagement = () => {
     // Search & View States
     const [personaSearch, setPersonaSearch] = useState('');
     const [setSearch, setSetSearch] = useState('');
-    const [activeRepoTab, setActiveRepoTab] = useState('All');
     const [viewMode, setViewMode] = useState('list'); // 'grid' or 'list'
 
     // Form States
@@ -273,13 +272,10 @@ const PersonaManagement = () => {
     );
 
     const filteredSets = personaSets?.filter(set => {
-        const matchesSearch = (set.name || '').toLowerCase().includes(setSearch.toLowerCase()) ||
+        return (set.name || '').toLowerCase().includes(setSearch.toLowerCase()) ||
             (set.description || '').toLowerCase().includes(setSearch.toLowerCase());
-        const matchesRepo = activeRepoTab === 'All' || set.repository === activeRepoTab;
-        return matchesSearch && matchesRepo;
     });
 
-    const repoList = ['All', ...new Set(personaSets?.map(s => s.repository) || [])];
 
     return (
         <div className="space-y-10 animate-slide-up pb-20 max-w-[1600px] mx-auto px-4">
@@ -310,21 +306,6 @@ const PersonaManagement = () => {
                         </div>
                     </div>
 
-                    {/* Repo Tabs */}
-                    <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-100 overflow-x-auto scrollbar-none">
-                        {repoList.map(repo => (
-                            <button
-                                key={repo}
-                                onClick={() => setActiveRepoTab(repo)}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeRepoTab === repo
-                                    ? 'bg-white text-indigo-600 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-                                    }`}
-                            >
-                                {repo}
-                            </button>
-                        ))}
-                    </div>
 
                     {/* Sets Search */}
                     <div className="relative group">
@@ -369,10 +350,6 @@ const PersonaManagement = () => {
                                         <p className="text-slate-500 text-[12px] line-clamp-2 leading-relaxed font-medium">
                                             {set.description || "Synthesized persona container."}
                                         </p>
-                                        <div className="flex items-center gap-2 pt-1">
-                                            <Hash size={12} className="text-slate-300" />
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{set.repository}</span>
-                                        </div>
                                     </div>
                                 </Card>
                             ))

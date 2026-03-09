@@ -51,7 +51,6 @@ const GuidelineManagement = () => {
     // Search & View States
     const [guidelineSearch, setGuidelineSearch] = useState('');
     const [setSearch, setSetSearch] = useState('');
-    const [activeRepoTab, setActiveRepoTab] = useState('All');
     const [viewMode, setViewMode] = useState('list'); // 'grid' or 'list'
 
     React.useEffect(() => {
@@ -225,13 +224,10 @@ const GuidelineManagement = () => {
     }, [guidelines]);
 
     const filteredSets = guidelineSets?.filter(set => {
-        const matchesSearch = (set.name || '').toLowerCase().includes(setSearch.toLowerCase()) ||
+        return (set.name || '').toLowerCase().includes(setSearch.toLowerCase()) ||
             (set.description || '').toLowerCase().includes(setSearch.toLowerCase());
-        const matchesRepo = activeRepoTab === 'All' || set.repository === activeRepoTab;
-        return matchesSearch && matchesRepo;
     });
 
-    const repoList = ['All', ...new Set(guidelineSets?.map(s => s.repository) || [])];
 
     return (
         <div className="space-y-10 animate-slide-up pb-20 max-w-[1600px] mx-auto px-4">
@@ -262,21 +258,6 @@ const GuidelineManagement = () => {
                         </div>
                     </div>
 
-                    {/* Repo Tabs */}
-                    <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-100 overflow-x-auto scrollbar-none">
-                        {repoList.map(repo => (
-                            <button
-                                key={repo}
-                                onClick={() => setActiveRepoTab(repo)}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${activeRepoTab === repo
-                                    ? 'bg-white text-purple-600 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-                                    }`}
-                            >
-                                {repo}
-                            </button>
-                        ))}
-                    </div>
 
                     {/* Sets Search */}
                     <div className="relative group">
