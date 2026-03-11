@@ -158,10 +158,6 @@ const PersonaManagement = () => {
         queryFn: () => guidelineRepo.listGuidelines(),
     });
 
-    const { data: repositories } = useQuery({
-        queryKey: ['repositories'],
-        queryFn: () => storageRepo.listRepositories(),
-    });
 
     const { data: createSetRefs } = useQuery({
         queryKey: ['storage-refs', setData.repository],
@@ -235,6 +231,7 @@ const PersonaManagement = () => {
         }
     });
 
+
     const handleDeleteSet = (e, set) => {
         e.stopPropagation();
         if (window.confirm(`"${set.name}" 세트를 삭제할까요?`)) {
@@ -263,6 +260,7 @@ const PersonaManagement = () => {
             deletePersonaMutation.mutate({ id: persona.id, namespace: persona.namespace });
         }
     };
+
 
     // Filtered Data
     const filteredPersonas = personas?.filter(p =>
@@ -1107,7 +1105,8 @@ const PersonaManagement = () => {
                     </div>
                 )}
             </Modal>
-        </div >
+
+        </div>
     );
 };
 

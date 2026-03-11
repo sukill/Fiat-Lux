@@ -15,4 +15,12 @@ export class ApiStorageRepository {
         const data = await response.json();
         return data.refs || [];
     }
+
+    async deleteRepository(repoName) {
+        const response = await fetch(`${this.baseUrl}/storage/repository?name=${encodeURIComponent(repoName)}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) throw new Error('Failed to delete repository');
+        return await response.json();
+    }
 }

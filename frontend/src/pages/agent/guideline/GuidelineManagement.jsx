@@ -90,10 +90,6 @@ const GuidelineManagement = () => {
         queryFn: () => guidelineRepo.listGuidelineSets(),
     });
 
-    const { data: repositories } = useQuery({
-        queryKey: ['repositories'],
-        queryFn: () => storageRepo.listRepositories(),
-    });
 
     const { data: guidelineRepositories } = useQuery({
         queryKey: ['guideline-repositories'],
@@ -175,6 +171,7 @@ const GuidelineManagement = () => {
         }
     });
 
+
     const handleDeleteGuideline = (e, guideline) => {
         e.stopPropagation();
         if (window.confirm(`"${guideline.title}" 가이드라인을 삭제하시겠습니까?`)) {
@@ -188,6 +185,7 @@ const GuidelineManagement = () => {
             deleteSetMutation.mutate(set.id);
         }
     };
+
 
     const { data: guidelineRefs } = useQuery({
         queryKey: ['storage-refs', guidelineData.repository],
@@ -904,6 +902,7 @@ const GuidelineManagement = () => {
                     </div>
                 </div>
             </Modal>
+
         </div>
     );
 };

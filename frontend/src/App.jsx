@@ -7,6 +7,7 @@ import PersonaManagement from './pages/agent/persona/PersonaManagement'
 import GuidelineManagement from './pages/agent/guideline/GuidelineManagement'
 import WorkflowExecution from './pages/agent/workflow/WorkflowExecution'
 import BrowserPage from './pages/agent/storage/BrowserPage'
+import RepositoryManagement from './pages/agent/storage/RepositoryManagement'
 
 const queryClient = new QueryClient()
 
@@ -18,6 +19,7 @@ function App() {
                     <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
                     <Route path="/personas" element={<MainLayout><PersonaManagement /></MainLayout>} />
                     <Route path="/guidelines" element={<MainLayout><GuidelineManagement /></MainLayout>} />
+                    <Route path="/repositories" element={<MainLayout><RepositoryManagement /></MainLayout>} />
                     <Route path="/workflows" element={<MainLayout><WorkflowExecution /></MainLayout>} />
                     <Route path="/browser" element={<MainLayout fullBleed={true}><BrowserPage /></MainLayout>} />
                 </Routes>

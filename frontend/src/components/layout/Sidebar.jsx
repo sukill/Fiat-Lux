@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { UserCircle, BookOpen, LayoutDashboard, Settings, Sparkles, FolderTree } from 'lucide-react';
+import { UserCircle, BookOpen, LayoutDashboard, Settings, Sparkles, FolderTree, Database } from 'lucide-react';
 
 const Sidebar = () => {
     const navItems = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
         { to: '/personas', icon: UserCircle, label: 'Personas' },
         { to: '/guidelines', icon: BookOpen, label: 'Guidelines' },
+        { to: '/repositories', icon: Database, label: 'Repositories' },
         { to: '/browser', icon: FolderTree, label: 'Repo Browser' },
     ];
 
