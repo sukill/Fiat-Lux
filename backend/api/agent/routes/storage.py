@@ -24,6 +24,15 @@ async def create_repository(
     success = await storage_service.init_repository(repo.name)
     return {"success": success}
 
+@router.delete("/repository")
+async def delete_repository(
+    name: str = Query(..., description="삭제할 저장소 이름"),
+    storage_service: StorageUseCase = Depends(get_storage_service)
+):
+    """기존 저장소를 삭제합니다."""
+    success = await storage_service.delete_repository(name)
+    return {"success": success}
+
 @router.get("/files", response_model=List[FileEntrySchema])
 async def list_files(
     repo_name: str = Query(..., description="저장소 이름"),

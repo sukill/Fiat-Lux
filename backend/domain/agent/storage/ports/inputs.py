@@ -22,3 +22,8 @@ class StorageUseCase(ABC):
     async def init_repository(self, repo_name: str) -> bool:
         """새로운 저장소를 초기화합니다."""
         pass
+
+    @abstractmethod
+    async def delete_repository(self, repo_name: str) -> bool:
+        """기존 저장소를 삭제합니다."""
+        pass

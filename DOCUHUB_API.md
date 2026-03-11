@@ -27,7 +27,23 @@ DocuHub은 분산 Git 기반의 가이드라인 저장소 시스템입니다. �
   }
   ```
 
-### 1-2. 외부 저장소 클론 (Clone Repo)
+### 1-2. 저장소 삭제 (Delete Repo)
+기존 개인 저장소를 삭제합니다.
+
+- **URL**: `/repo/delete`
+- **Method**: `DELETE`
+- **Query Parameters**:
+  - `user_id` (string, required): 사용자 식별자
+  - `repo_name` (string, required): 저장소 이름
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Repository deleted successfully"
+  }
+  ```
+
+### 1-3. 외부 저장소 클론 (Clone Repo)
 외부 원격 소스(Upstream)로부터 저장소를 동기화하여 초기화합니다.
 
 - **URL**: `/repo/clone`

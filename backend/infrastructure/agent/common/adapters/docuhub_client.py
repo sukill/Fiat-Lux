@@ -101,3 +101,22 @@ class DocuHubClient:
             response = await client.get(f"{self.base_url}/repo/file", params=params)
             response.raise_for_status()
             return response.json().get("content", "")
+
+    async def delete_repo(self, repo_name: Optional[str] = None, namespace: Optional[str] = None) -> bool:
+        """저장소를 삭제합니다."""
+        target_repo = repo_name or self.repo_name
+        target_namespace = namespace or self.namespace
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.delete(
+                    f"{self.base_url}/repo/delete",
+                    params={"namespace": target_namespace, "repo_name": target_repo},
+                )
+                response.raise_for_status()
+                return response.json().get("success", False)
+            except Exception as e:
+                if isinstance(e, httpx.HTTPStatusError):
+                    print(f"Error deleting repo: {e.response.text}")
+                else:
+                    print(f"Error deleting repo: {e}")
+                return False

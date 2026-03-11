@@ -21,3 +21,8 @@ class DocuHubPort(ABC):
     async def init_repo(self, repo_name: str) -> bool:
         """DocuHub에 저장소를 초기화합니다."""
         pass
+
+    @abstractmethod
+    async def delete_repo(self, repo_name: str) -> bool:
+        """DocuHub에서 저장소를 삭제합니다."""
+        pass
